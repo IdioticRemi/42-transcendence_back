@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
+import * as typeorm from 'typeorm'
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -12,7 +13,13 @@ describe('UsersService', () => {
     service = module.get<UsersService>(UsersService);
   });
 
-  it('should be defined', () => {
+  it('should be defined', async () => {
     expect(service).toBeDefined();
+    const request = new Request("https://localhost:3000/users", {method: "GET"})
+    const response = await fetch(request);
+    const body = (await response.body.getReader().read()).value;
+    const str = body.toString();
+    const obj = JSON.parse(str);
+    expect(obj).toBeInstanceOf(Array);
   });
 });
