@@ -2,13 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AddUserDto } from './dto/user.dto';
+import { FriendEntity } from './entities/friend.entity';
 import { UserEntity } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
 	constructor(
 		@InjectRepository(UserEntity)
-		private usersRepository: Repository<UserEntity>
+		private usersRepository: Repository<UserEntity>,
+		@InjectRepository(FriendEntity)
+		private friendsRepository: Repository<FriendEntity>
 	) {}
 	
 	async getAllUsers(): Promise<UserEntity[]> {
@@ -44,6 +47,10 @@ export class UsersService {
 	async softRemoveUser(id: number): Promise<UserEntity> {
 		const toRemove : UserEntity = await this.findById(id);
 		return this.usersRepository.softRemove(toRemove);
+	}
+
+	async getFriends(): Promise<FriendEntity[]> {
+		return await this.friendsRepository.find();
 	}
 
 }

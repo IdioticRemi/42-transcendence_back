@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SocketGateway } from './socket.gateway';
+import { FriendEntity } from './users/entities/friend.entity';
 import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 
@@ -16,7 +17,7 @@ import { UsersModule } from './users/users.module';
       username: 'root',
       password: 'myrootpassword',
       database: 'user_db',
-      entities: [UserEntity],
+      entities: [UserEntity, FriendEntity],
       // synchronize: true => dev only
       synchronize: true,
     }),
