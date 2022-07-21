@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AddUserDto } from './dto/user.dto';
+import { BlockedEntity } from './entities/blocked.entity';
 import { FriendEntity } from './entities/friend.entity';
 import { UserEntity } from './entities/user.entity';
 
@@ -11,7 +12,9 @@ export class UsersService {
 		@InjectRepository(UserEntity)
 		private usersRepository: Repository<UserEntity>,
 		@InjectRepository(FriendEntity)
-		private friendsRepository: Repository<FriendEntity>
+		private friendsRepository: Repository<FriendEntity>,
+		@InjectRepository(BlockedEntity)
+		private blockedRepository: Repository<BlockedEntity>
 	) {}
 	
 	async getAllUsers(): Promise<UserEntity[]> {
@@ -51,6 +54,10 @@ export class UsersService {
 
 	async getFriends(): Promise<FriendEntity[]> {
 		return await this.friendsRepository.find();
+	}
+
+	async getBlocked(): Promise<BlockedEntity[]> {
+		return await this.blockedRepository.find();
 	}
 
 }
