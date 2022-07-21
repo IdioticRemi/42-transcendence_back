@@ -1,5 +1,5 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, OneToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from "typeorm";
-import { FriendEntity } from "./friend.entity";
+import { ChannelEntity } from "src/channel/entities/channel.entity";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, ManyToMany, OneToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from "typeorm";
 
 @Entity('UserEntity')
 export class UserEntity {
@@ -20,6 +20,10 @@ export class UserEntity {
 		unique: true
 	})
 	name: string;
+
+	// @Column({ array: true })
+	// @ManyToMany( () => ChannelEntity, (channel) => channel.id )
+	// channels: ChannelEntity[];
 
 	@CreateDateColumn()
 	createdAt: Date;
