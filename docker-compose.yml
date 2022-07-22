@@ -5,6 +5,7 @@ services:
     image: postgres:12.2
     container_name: postgres
     restart: always
+    command: /bin/sh -c "mkdir postgres"
     environment:
     - POSTGRES_DB=user_db
     - POSTGRES_USER=root
@@ -21,6 +22,7 @@ services:
     image: dpage/pgadmin4
     container_name: pgadmin
     restart: always
+    command: /bin/sh -c "mkdir pgadmin"
     environment:
     - PGADMIN_DEFAULT_EMAIL=root@student.42lyon.fr
     - PGADMIN_DEFAULT_PASSWORD=myrootpassword
