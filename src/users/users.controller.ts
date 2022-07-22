@@ -21,7 +21,7 @@ export class UsersController {
 		return this.usersService.getUserById(id);
 	}
 	
-	@Post()
+	@Post('register')
 	addUser(
 		@Body() newuserdto: AddUserDto
 		) : Promise<UserEntity> {
