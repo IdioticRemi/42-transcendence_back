@@ -7,7 +7,9 @@ export class UserEntity {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@Column()
+	@Column({
+		default: ""
+	})
 	token: string;
 
 	@Column({
@@ -19,7 +21,7 @@ export class UserEntity {
 		length: 16,
 		unique: true
 	})
-	name: string;
+	username: string;
 
 	@JoinTable()
 	@ManyToMany( () => ChannelEntity )
