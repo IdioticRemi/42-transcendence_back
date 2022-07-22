@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AddUserDto } from './dto/user.dto';
@@ -43,8 +43,10 @@ export class UsersService {
 	}
 
 	async addUser(newUser: AddUserDto): Promise<UserEntity> {
-
-		return await this.usersRepository.save(newUser);
+		const addedUser = await this.usersRepository.save(newUser).catch(() => {
+			throw new HttpException("Username already registered", 400);
+		});
+		return addedUser;
 	}
 
 	async softRemoveUser(id: number): Promise<UserEntity> {
