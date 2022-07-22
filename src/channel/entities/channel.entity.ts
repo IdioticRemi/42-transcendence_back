@@ -1,5 +1,5 @@
 import { UserEntity } from "src/users/entities/user.entity";
-import { Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('ChannelEntity')
 export class ChannelEntity {
@@ -10,13 +10,12 @@ export class ChannelEntity {
 	@Column()
 	name: string;
 
-	// @Column({
-	// 	array: true })
-	// @ManyToMany( () => UserEntity, (user) => user.id)
-	// users: UserEntity[];
+	@JoinColumn()
+	@ManyToMany( () => UserEntity, (user) => user.id)
+	users: UserEntity[];
 
-	// @Column({ array: true })
-	// @ManyToMany( () => UserEntity, (user) => user.id )
-	// operators: UserEntity[];
+	@JoinColumn()
+	@ManyToMany( () => UserEntity, (user) => user.id )
+	operators: UserEntity[];
 
 }

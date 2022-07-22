@@ -20,7 +20,7 @@ import { ChannelEntity } from './channel/entities/channel.entity';
       username: 'root',
       password: 'myrootpassword',
       database: 'user_db',
-      entities: [UserEntity, FriendEntity, BlockedEntity],
+      entities: [UserEntity, FriendEntity, BlockedEntity, ChannelEntity],
       // synchronize: true => dev only
       synchronize: true,
     }),
