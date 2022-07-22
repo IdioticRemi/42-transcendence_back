@@ -5,6 +5,6 @@ import { Unique } from "typeorm";
 export class AddUserDto {
 	@IsNotEmpty()
 	@IsString()
-	name: string;
+	username: string;
 
 }
