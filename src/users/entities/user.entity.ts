@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from "typeorm";
+import { ChannelEntity } from "src/channel/entities/channel.entity";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 @Entity('UserEntity')
 export class UserEntity {
@@ -6,7 +7,9 @@ export class UserEntity {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@Column()
+	@Column({
+		default: ""
+	})
 	token: string;
 
 	@Column({
@@ -18,7 +21,11 @@ export class UserEntity {
 		length: 16,
 		unique: true
 	})
-	name: string;
+	username: string;
+
+	@JoinTable()
+	@ManyToMany( () => ChannelEntity )
+	channels: ChannelEntity[];
 
 	@CreateDateColumn()
 	createdAt: Date;
