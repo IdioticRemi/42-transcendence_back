@@ -8,3 +8,7 @@ export class AddUserDto {
 	username: string;
 
 }
+
+export class SendUserDto {
+	username: string;
+}

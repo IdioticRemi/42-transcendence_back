@@ -10,9 +10,13 @@ import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 import { ChannelModule } from './channel/channel.module';
 import { ChannelEntity } from './channel/entities/channel.entity';
+import { AuthorizationModule } from './authorization/authorization.module';
+import { AuthorizationStrategy } from './authorization/authorization.strategy';
+import { ConfigModule } from '@nestjs/config';
+import { config } from 'process';
 
 @Module({
-  imports: [
+  imports: [ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -26,10 +30,12 @@ import { ChannelEntity } from './channel/entities/channel.entity';
     }),
     UsersModule,
     ChannelModule,
+    AuthorizationModule,
   ],
   controllers: [AppController],
-  providers: [AppService, SocketGateway],
+  providers: [AppService, SocketGateway, AuthorizationStrategy],
 })
 export class AppModule {
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) {
+  }
 }
