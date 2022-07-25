@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
-import { MResponse } from 'src/MResponse';
-import { AddUserDto, SendUserDto } from './dto/user.dto';
+import { AddUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
 
@@ -25,7 +24,7 @@ export class UsersController {
 	@Post('register')
 	addUser(
 		@Body() newuserdto: AddUserDto
-		) : Promise<MResponse<SendUserDto>> {
+		) : Promise<UserEntity> {
 			return this.usersService.addUser(newuserdto);
 		}
 		
