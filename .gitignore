@@ -1,8 +1,17 @@
-# compiled output
+# IMPORTANT
+.env
+
+# Docker volumes
+postgres
+pgadmin
+
+# Compiled output
 /dist
+
+# Dependencies
 /node_modules
 
-# Logs
+# Log files
 logs
 *.log
 npm-debug.log*
@@ -33,5 +42,4 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-postgres/*
-pgadmin/*
+
