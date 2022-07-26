@@ -6,13 +6,7 @@ export class AppService {
     return 'Hello World!';
   }
 
-  authLogin(req) {
-    if (!req.user) {
-      return 'No user from 42'
-    }
-    return {
-      message: 'User Info from 42',
-      user: req.user
-    }
+  getGoodbye(): string {
+    return 'Good be';
   }
 }

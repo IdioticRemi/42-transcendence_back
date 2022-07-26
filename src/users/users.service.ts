@@ -1,13 +1,10 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MResponse } from 'src/MResponse';
 import { Repository } from 'typeorm';
-import { AddUserDto, SendUserDto } from './dto/user.dto';
+import { AddUserDto } from './dto/user.dto';
 import { BlockedEntity } from './entities/blocked.entity';
 import { FriendEntity } from './entities/friend.entity';
 import { UserEntity } from './entities/user.entity';
-
-
 
 @Injectable()
 export class UsersService {
@@ -45,19 +42,9 @@ export class UsersService {
 		return userResult;
 	}
 
-	async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
-		return this.usersRepository.save(newUser)
-			.then((user) => {
-				return {
-					status: 'success',
-					payload: user,
-				} as MResponse<SendUserDto>;
-			}).catch(() => {
-				// throw new HttpException(`Username already registered`, 400);
-				return {
-					status: 'error',
-					message: `Username already registered`,
-				};
+	async addUser(newUser: AddUserDto): Promise<UserEntity> {
+		const addedUser = await this.usersRepository.save(newUser).catch(() => {
+			throw new HttpException("Username already registered", 400);
 		});
 	}
 
