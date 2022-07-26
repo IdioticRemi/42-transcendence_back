@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { MResponse } from 'src/MResponse';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.entity';
@@ -23,6 +24,7 @@ export class UsersController {
 	}
 	
 	@Post('register')
+	@UseGuards(AuthGuard('42Auth'))
 	addUser(
 		@Body() newuserdto: AddUserDto
 		) : Promise<MResponse<SendUserDto>> {
