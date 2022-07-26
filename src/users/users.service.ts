@@ -59,7 +59,6 @@ export class UsersService {
 					message: `Username already registered`,
 				};
 		});
-		// return addedUser;
 	}
 
 	async softRemoveUser(id: number): Promise<UserEntity> {
