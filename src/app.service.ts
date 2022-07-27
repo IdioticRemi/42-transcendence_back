@@ -70,6 +70,8 @@ export class AppService {
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     };
+
+    // changer le then then par response = await fetch()
     fetch("https://api.intra.42.fr/v2/me", options)
       .then(async (response) => {
         console.log(response);
