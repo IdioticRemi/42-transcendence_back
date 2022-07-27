@@ -22,7 +22,7 @@ export class AppController {
 
   @Get('auth')
   AuthRequest(
-    @Req() req,
+    @Req() req : Request,
     @Res() res
   ) {
     res.redirect(`https://api.intra.42.fr/oauth/authorize?client_id=${process.env.UID}&redirect_uri=${process.env.CALLBACK_URI}&response_type=code`);
@@ -35,7 +35,10 @@ export class AppController {
     @Res() res
   ) {
     console.log("Callback from 42 API", code);
-    this.appService.authenticate(code, res);
+    if (this.appService.authenticate(code, res))
+      res.redirect('http://localhost:8081/register');
+    else
+      res.redirect('http://localhost:8081/');
     // get exchange code for token
     
 

@@ -7,6 +7,10 @@ export class AddUserDto {
 	@IsString()
 	username: string;
 
+	@IsNotEmpty()
+	@IsString()
+	token: string;
+
 }
 
 export class SendUserDto {
