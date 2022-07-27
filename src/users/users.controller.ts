@@ -24,7 +24,6 @@ export class UsersController {
 	}
 	
 	@Post('register')
-	@UseGuards(AuthGuard('42Auth'))
 	addUser(
 		@Body() newuserdto: AddUserDto
 		) : Promise<MResponse<SendUserDto>> {
