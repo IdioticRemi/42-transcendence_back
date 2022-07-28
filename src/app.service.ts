@@ -39,7 +39,7 @@ export class AppService {
     const token = await fetch("https://api.intra.42.fr/oauth/token", options)
       .then(async (response) => {
         let json = await response.json();
-        console.log("token request's response:", json);
+        // console.log("token request's response:", json);
         if (!response.ok) {
           return Promise.reject(json.message);
         }
@@ -47,7 +47,7 @@ export class AppService {
         return token;
       })
       .catch((error) => {
-        console.log(error);
+        // console.log(error);
         // TODO: handle error
         return 'ERROR REMOVE THIS';
       });
@@ -70,23 +70,25 @@ export class AppService {
       },
     };
     // fetch("https://api.intra.42.fr/v2/users?filter[login]=dburgun", options)
-    fetch("https://api.intra.42.fr/v2/me", options)
-      .then(async (response) => {
-        console.log(response);
-        if (!response.ok) {
-          return Promise.reject(`Error ${response.status}: Failed to get user infos`);
-        }
-        let json = await response.json();
-        console.log("user info's response:", json);
-        const id42 = json.id;
-        const username = json.login;
-        console.log("id:", id42, "username:", username, "token:", token);
-        this.logUser(id42, username, token);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-    return false;
+    
+    return fetch("https://api.intra.42.fr/v2/me", options)
+    .then(async (response) => {
+      // console.log(response);
+      if (!response.ok) {
+        return Promise.reject(`Error ${response.status}: Failed to get user infos`);
+      }
+      let json = await response.json();
+      // console.log("user info's response:", json);
+      const id42 = json.id;
+      const username = json.login;
+      console.log("id:", id42, "username:", username, "token:", token);
+      this.logUser(id42, username, token);
+      return true;
+    })
+    .catch((error) => {
+      // console.log(error);
+      return false;
+    });
   }
 
   async logUser(id42: string, username: string, token: string): Promise<Partial<UserEntity>> {
@@ -103,7 +105,7 @@ export class AppService {
         "username": username,
         "token": token
       })
-      .catch((user) => {console.log("cannot register user", user)});
+      .catch((user) => {console.log("cannot register user", username)});
       return newUser as Partial<UserEntity>;
     }
     return user;

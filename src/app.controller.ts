@@ -30,12 +30,14 @@ export class AppController {
 
 
   @Get('auth/42Auth/callback')
-  AuthRedirect(
+  async AuthRedirect(
     @Query('code') code,
     @Res() res
   ) {
     console.log("Callback from 42 API", "code retrieved:", code);
-    if (this.appService.authenticate(code, res))
+    const cond: boolean = await this.appService.authenticate(code, res);
+    console.log(cond);
+    if (cond)
       res.redirect('http://localhost:8081/register');
     else
       res.redirect('http://localhost:8081/');  
