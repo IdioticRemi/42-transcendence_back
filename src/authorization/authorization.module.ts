@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BlockedEntity } from 'src/users/entities/blocked.entity';
+import { FriendEntity } from 'src/users/entities/friend.entity';
+import { UserEntity } from 'src/users/entities/user.entity';
 import { AuthorizationController } from './authorization.controller';
-import ClientOAuth2 from 'client-oauth2';
+import { AuthorizationService } from './authorization.service';
 
 @Module({
-  controllers: [AuthorizationController]
+  imports: [TypeOrmModule.forFeature([UserEntity, FriendEntity, BlockedEntity])],
+  controllers: [AuthorizationController],
+  providers: [AuthorizationService]
 })
 export class AuthorizationModule {}
