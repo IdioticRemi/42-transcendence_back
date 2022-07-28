@@ -17,12 +17,13 @@ export class AppService {
   }
 
   async getToken(code: string, res: Response): Promise<string> {
-    console.log("retrieving token");
+    console.log("now retrieving token...");
     const body = {
-      grant_type: 'client_credentials',
-      client_id: process.env.UID,
-      client_secret: process.env.SECRET,
-      code
+      "grant_type": 'authorization_code',
+      "client_id": process.env.UID,
+      "client_secret": process.env.SECRET,
+      "redirect_uri": process.env.CALLBACK_URI,
+      "code": code,
     }
     const options = {
       method: "POST",
@@ -43,7 +44,6 @@ export class AppService {
           return Promise.reject(json.message);
         }
         const token = json.access_token as string;
-        console.log("token obtained:", token);
         return token;
       })
       .catch((error) => {
@@ -51,7 +51,6 @@ export class AppService {
         // TODO: handle error
         return 'ERROR REMOVE THIS';
       });
-      console.log("token before return:", token);
       return Promise.resolve(token);
   }
 
@@ -70,6 +69,7 @@ export class AppService {
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     };
+    // fetch("https://api.intra.42.fr/v2/users?filter[login]=dburgun", options)
     fetch("https://api.intra.42.fr/v2/me", options)
       .then(async (response) => {
         console.log(response);
@@ -78,8 +78,10 @@ export class AppService {
         }
         let json = await response.json();
         console.log("user info's response:", json);
+        const id42 = json.id;
         const username = json.login;
-        this.logUser(username, token);
+        console.log("id:", id42, "username:", username, "token:", token);
+        this.logUser(id42, username, token);
       })
       .catch((error) => {
         console.log(error);
@@ -87,21 +89,22 @@ export class AppService {
     return false;
   }
 
-  async logUser(username: string, token: string): Promise<Partial<UserEntity>> {
+  async logUser(id42: string, username: string, token: string): Promise<Partial<UserEntity>> {
     let user = await this.userRepository.findOne({
       where: {
         "username": username
         }
       });
-    if (user === undefined)
+    if (!user)
     {
       console.log("unregistered user, creating new account with credentials:", username, token);
       const newUser = await this.userRepository.save({
+        "id": parseInt(id42),
         "username": username,
         "token": token
       })
-      .then((user) => {return newUser})
       .catch((user) => {console.log("cannot register user", user)});
+      return newUser as Partial<UserEntity>;
     }
     return user;
   }
