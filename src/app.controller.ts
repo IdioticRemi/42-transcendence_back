@@ -1,9 +1,6 @@
 import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { AppService } from './app.service';
-import * as axios from '@nestjs/axios';
-import { Token } from 'client-oauth2';
-
+import { Request } from 'express';
 
 @Controller()
 export class AppController {
@@ -11,7 +8,7 @@ export class AppController {
 
   @Get()
   async authenticate(@Req() req) {
-    console.log("authentification");
+    console.log('authentification');
   }
 
   // @Get('login')
@@ -21,26 +18,20 @@ export class AppController {
   // }
 
   @Get('auth')
-  AuthRequest(
-    @Req() req : Request,
-    @Res() res
-  ) {
-    res.redirect(`https://api.intra.42.fr/oauth/authorize?client_id=${process.env.UID}&redirect_uri=${process.env.CALLBACK_URI}&scope=public&response_type=code`);
+  AuthRequest(@Req() req: Request, @Res() res) {
+    res.redirect(
+      `https://api.intra.42.fr/oauth/authorize?client_id=${process.env.UID}&redirect_uri=${process.env.CALLBACK_URI}&scope=public&response_type=code`,
+    );
   }
 
-
   @Get('auth/42Auth/callback')
-  async AuthRedirect(
-    @Query('code') code,
-    @Res() res
-  ) {
-    console.log("Callback from 42 API", "code retrieved:", code);
-    const cond: boolean = await this.appService.authenticate(code, res);
-    console.log(cond);
-    if (cond)
-      res.redirect('http://localhost:8081/register');
-    else
-      res.redirect('http://localhost:8081/');  
+  async AuthRedirect(@Query('code') code, @Res() res) {
+    console.log('Callback from 42 API', 'code retrieved:', code);
+    const user = await this.appService.authenticate(code, res);
+    console.log(user);
+    if (user !== undefined)
+      res.redirect(`http://localhost:8081/register?token=${user.token}`);
+    else res.redirect('http://localhost:8081/');
   }
 
   @Get('hello')
