@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { StringifyOptions } from 'querystring';
 import { Repository } from 'typeorm';
 import { AddUserDto } from './users/dto/user.dto';
 import { UserEntity } from './users/entities/user.entity';
@@ -55,9 +54,10 @@ export class AppService {
   }
 
   async authenticate(code: string, res: Response): Promise<boolean> {
+    // get token
     const token = await this.getToken(code, res);
     console.log("token obtained:", token);
-    // get user info 
+    // building request
     const options = {
       method: "GET",
       headers: {
@@ -69,8 +69,7 @@ export class AppService {
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     };
-    // fetch("https://api.intra.42.fr/v2/users?filter[login]=dburgun", options)
-    
+    // get user info request
     return fetch("https://api.intra.42.fr/v2/me", options)
     .then(async (response) => {
       // console.log(response);
@@ -82,21 +81,24 @@ export class AppService {
       const id42 = json.id;
       const username = json.login;
       console.log("id:", id42, "username:", username, "token:", token);
+      // retrieve user's info from db or create account
       this.logUser(id42, username, token);
       return true;
     })
     .catch((error) => {
-      // console.log(error);
+      console.log(error);
       return false;
     });
   }
 
   async logUser(id42: string, username: string, token: string): Promise<Partial<UserEntity>> {
+    // retrieve user's info
     let user = await this.userRepository.findOne({
       where: {
         "username": username
         }
       });
+    // creating account on database if user does not exists
     if (!user)
     {
       console.log("unregistered user, creating new account with credentials:", username, token);
@@ -105,9 +107,10 @@ export class AppService {
         "username": username,
         "token": token
       })
-      .catch((user) => {console.log("cannot register user", username)});
+      .catch(() => {console.log("cannot register user", username)});
       return newUser as Partial<UserEntity>;
     }
+    // return actuel user
     return user;
   }
 }

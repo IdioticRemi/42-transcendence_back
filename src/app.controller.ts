@@ -1,8 +1,7 @@
 import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+// import { AuthGuard } from '@nestjs/passport';
 import { AppService } from './app.service';
-import * as axios from '@nestjs/axios';
-import { Token } from 'client-oauth2';
+// import * as axios from '@nestjs/axios';
 
 
 @Controller()
@@ -40,7 +39,7 @@ export class AppController {
     if (cond)
       res.redirect('http://localhost:8081/register');
     else
-      res.redirect('http://localhost:8081/');  
+      res.redirect('http://localhost:8081/?login=false');  
   }
 
   @Get('hello')
