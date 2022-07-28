@@ -4,6 +4,7 @@ import { StringifyOptions } from 'querystring';
 import { Repository } from 'typeorm';
 import { AddUserDto } from './users/dto/user.dto';
 import { UserEntity } from './users/entities/user.entity';
+import * as fetch from 'node-fetch';
 
 @Injectable()
 export class AppService {
@@ -54,7 +55,7 @@ export class AppService {
       return Promise.resolve(token);
   }
 
-  async authenticate(code: string, res: Response): Promise<boolean> {
+  async authenticate(code: string, res: Response): Promise<UserEntity|undefined> {
     const token = await this.getToken(code, res);
     console.log("token obtained:", token);
     // get user info 
@@ -82,12 +83,11 @@ export class AppService {
       const id42 = json.id;
       const username = json.login;
       console.log("id:", id42, "username:", username, "token:", token);
-      this.logUser(id42, username, token);
-      return true;
+      return this.logUser(id42, username, token);
     })
     .catch((error) => {
       // console.log(error);
-      return false;
+      return undefined;
     });
   }
 
