@@ -8,7 +8,7 @@ export class AuthorizationController {
   ) {}
 
   @Get()
-  AuthRequest(@Req() req: Request, @Res() res) {
+  AuthRequest(@Res() res) {
     res.redirect(
       `https://api.intra.42.fr/oauth/authorize?client_id=${process.env.UID}&redirect_uri=${process.env.CALLBACK_URI}&scope=public&response_type=code`,
     );
