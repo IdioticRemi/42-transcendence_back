@@ -76,7 +76,7 @@ export class AuthorizationService {
 			return Promise.reject(`Error ${response.status}: Failed to get user infos`);
 		  }
 		  let json = await response.json() as GetUserDto;
-		  // console.log("user info's response:", json);
+		//   console.log("user info's response:", json);
 		  if (json.hasOwnProperty('id') && json.hasOwnProperty('login')){
 			const id42 = json.id;
 			const username = json.login;
