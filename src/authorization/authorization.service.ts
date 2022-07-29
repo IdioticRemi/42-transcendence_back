@@ -44,15 +44,16 @@ export class AuthorizationService {
 			return token;
 		  })
 		  .catch((error) => {
-			// console.log(error);
-			// TODO: handle error
-			return 'ERROR REMOVE THIS';
+			console.log(error);
+			return ''; // return empty token if error
 		  });
 		  return Promise.resolve(token);
 	  }
 	
 	  async authenticate(code: string, res: Response): Promise<UserEntity|undefined> {
 		const token = await this.getToken(code, res);
+		if (token === '')
+			return undefined;
 		console.log("token obtained:", token);
 		// get user info 
 		const options = {
@@ -105,9 +106,10 @@ export class AuthorizationService {
 			"username": username,
 			"token": token
 		  })
-		  .catch((user) => {console.log("cannot register user", username)});
+		  .catch(() => {console.log("cannot register user", username)});
 		  return newUser as Partial<UserEntity>;
 		}
+		console.log(`${user.username} is already registered in the database`);
 		return user;
 	  }
 }

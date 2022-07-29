@@ -21,6 +21,6 @@ export class AuthorizationController {
     console.log(user);
     if (user !== undefined)
       res.redirect(`http://localhost:8081/home?token=${user.token}`);
-    else res.redirect('http://localhost:8081/');
+    else res.redirect('http://localhost:8081?login=false');
   }
 }
