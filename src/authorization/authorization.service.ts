@@ -3,9 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import fetch from "node-fetch";
-import { JsonResponse } from 'lib/api.objects';
+import { JsonResponseInterface } from 'lib/api.objects';
 import { GetUserDto } from 'src/users/dto/user.dto';
-
 
 @Injectable()
 export class AuthorizationService {
@@ -36,7 +35,7 @@ export class AuthorizationService {
 		};
 		const token = await fetch("https://api.intra.42.fr/oauth/token", options)
 		  .then(async (response) => {
-			let json = await response.json() as JsonResponse;
+			let json = await response.json() as JsonResponseInterface;
 			// console.log("token request's response:", json);
 			if (!response.ok) {
 			  return Promise.reject(json.message);
