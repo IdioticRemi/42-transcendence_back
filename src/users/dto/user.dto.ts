@@ -16,3 +16,8 @@ export class AddUserDto {
 export class SendUserDto {
 	username: string;
 }
+
+export class GetUserDto {
+	id: string;
+	login: string;
+}

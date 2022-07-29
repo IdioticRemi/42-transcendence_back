@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
+import fetch from "node-fetch";
+import { JsonResponse } from 'lib/api.objects';
+import { GetUserDto } from 'src/users/dto/user.dto';
+
 
 @Injectable()
 export class AuthorizationService {
@@ -32,7 +36,7 @@ export class AuthorizationService {
 		};
 		const token = await fetch("https://api.intra.42.fr/oauth/token", options)
 		  .then(async (response) => {
-			let json = await response.json();
+			let json = await response.json() as JsonResponse;
 			// console.log("token request's response:", json);
 			if (!response.ok) {
 			  return Promise.reject(json.message);
@@ -71,12 +75,16 @@ export class AuthorizationService {
 		  if (!response.ok) {
 			return Promise.reject(`Error ${response.status}: Failed to get user infos`);
 		  }
-		  let json = await response.json();
+		  let json = await response.json() as GetUserDto;
 		  // console.log("user info's response:", json);
-		  const id42 = json.id;
-		  const username = json.login;
-		  console.log("id:", id42, "username:", username, "token:", token);
-		  return this.logUser(id42, username, token);
+		  if (json.hasOwnProperty('id') && json.hasOwnProperty('login')){
+			const id42 = json.id;
+			const username = json.login;
+			console.log("id:", id42, "username:", username, "token:", token);
+			return this.logUser(id42, username, token);
+		  }
+		  else
+		  	return undefined;
 		})
 		.catch((error) => {
 		  // console.log(error);
