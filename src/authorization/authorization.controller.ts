@@ -20,7 +20,7 @@ export class AuthorizationController {
     const user = await this.authorizationService.authenticate(code, res);
     console.log(user);
     if (user !== undefined)
-      res.redirect(`http://localhost:8081/register?token=${user.token}`);
+      res.redirect(`http://localhost:8081/home?token=${user.token}`);
     else res.redirect('http://localhost:8081/');
   }
 }
