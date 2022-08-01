@@ -57,5 +57,6 @@ export class UsersController {
 		): void {
 	console.log(user, file);
 	console.log(file.mimetype);
+	// save file path in user database
 	}
 }
