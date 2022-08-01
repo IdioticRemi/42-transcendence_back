@@ -1,11 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UploadedFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ExpressAdapter, FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { MResponse } from 'src/MResponse';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { Express } from 'express';
+import { Multer } from 'multer';
 
 @Controller('users')
 export class UsersController {
@@ -38,13 +39,10 @@ export class UsersController {
 		) {
 			return this.usersService.softRemoveUser(id);
 		}
+		
+	@Post('upload')
+	@UseInterceptors(FilesInterceptor('image'))
+	uploadFile(@UploadedFile() file: Express.Multer.File) {
+	console.log(file);
 	}
-
-	// @Post('upload')
-	// @UseInterceptors(FileInterceptor('file'))
-	// uploadFile(
-	// 	@UploadedFile() file: Express.Multer.File
-	// 	) {
-	// 	console.log(file);
-	// }
-	
+}
