@@ -66,6 +66,11 @@ export class UsersService {
 		return this.usersRepository.softRemove(toRemove);
 	}
 
+	async updateAvatar(user: string, path: string) {
+		console.log("updating", user, path);
+		await this.usersRepository.update({username: user}, {img_path: path})
+	}
+
 	async getFriends(): Promise<FriendEntity[]> {
 		return await this.friendsRepository.find();
 	}

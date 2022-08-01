@@ -8,7 +8,7 @@ import { UsersService } from './users.service';
 import { Express } from 'express';
 import { diskStorage, Multer } from 'multer';
 import { request } from 'http';
-import path from 'path';
+import path, { extname } from 'path';
 
 @Controller('users')
 export class UsersController {
@@ -42,22 +42,22 @@ export class UsersController {
 			return this.usersService.softRemoveUser(id);
 		}
 		
+	// the interceptor work on the 'file' field of the request
 	@Post('upload/:user')
 	@UseInterceptors(FileInterceptor('file', {
 		storage: diskStorage({
 			destination: './uploads',
-			filename:  function (req, file, cb) {
-				// to do : protect against no extension files
-				cb(null, req.params.user + '.' + file.mimetype.split('/')[1]);
+			filename:  function (req, file, cb) { 
+				cb(null, req.params.user + extname(file.originalname));
 			  }
 			})
 		}))
 	uploadFile(
 		@UploadedFile() file: Express.Multer.File,
-		@Param() user: string
+		@Param('user') user: string
 		): void {
 	console.log(user, file);
 	console.log(file.mimetype);
-	// save file path in user database
+	this.usersService.updateAvatar(user, file.path);
 	}
 }

@@ -19,6 +19,11 @@ export class UserEntity {
 	img: Uint8Array;
 
 	@Column({
+		default: ""
+	})
+	img_path: string;
+
+	@Column({
 		length: 16,
 		unique: true
 	})
