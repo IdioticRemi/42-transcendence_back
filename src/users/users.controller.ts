@@ -7,8 +7,7 @@ import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { Express } from 'express';
 import { diskStorage, Multer } from 'multer';
-import { request } from 'http';
-import path, { extname } from 'path';
+import { extname } from 'path';
 
 @Controller('users')
 export class UsersController {
