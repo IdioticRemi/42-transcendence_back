@@ -47,6 +47,7 @@ export class UsersController {
 		storage: diskStorage({
 			destination: './uploads',
 			filename:  function (req, file, cb) {
+				// to do : protect against no extension files
 				cb(null, req.params.user + '.' + file.mimetype.split('/')[1]);
 			  }
 			})
