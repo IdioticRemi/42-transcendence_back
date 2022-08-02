@@ -5,6 +5,9 @@ import { Repository } from 'typeorm';
 import fetch from "node-fetch";
 import { JsonResponseInterface } from 'lib/api.objects';
 import { GetUserDto } from 'src/users/dto/user.dto';
+import * as fs from 'fs';
+import axios from 'axios';
+
 
 @Injectable()
 export class AuthorizationService {
@@ -107,6 +110,12 @@ export class AuthorizationService {
 			"token": token
 		  })
 		  .catch(() => {console.log("cannot register user", username)});
+		  // download 42 intra's picture
+		  console.log(`downloading intra picture from https://cdn.intra.42.fr/users/${username}.jpg`);
+		  const writer = fs.createWriteStream(`./uploads/${username}.jpg`);
+		  const url = `https://cdn.intra.42.fr/users/${username}.jpg`;
+		  const response = await axios({url, method: 'GET', responseType: 'stream'})
+		  response.data.pipe(writer);
 		  return newUser as Partial<UserEntity>;
 		}
 		console.log(`${user.username} is already registered in the database`);
