@@ -1,1 +1,1 @@
-// export let a = 3;
+export let maxUploadSize = 1000;
