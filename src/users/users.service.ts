@@ -80,10 +80,11 @@ export class UsersService {
 
 	async updateAvatar(user: string, path: string) {
 		console.log("updating", user, path);
-		// checks if previous uploaded avatar
+		// checks if previous uploaded avatar and filename is different
 		const userResult = await this.getUserByUsername(user);
-		if (userResult.img_path !== defaultAvatar)
+		if (userResult.img_path !== defaultAvatar && userResult.img_path !== path)
 		{
+			console.log("deleting previous avatar");
 			// delete previous avatar 
 			try {
 				fs.unlinkSync(userResult.img_path);
