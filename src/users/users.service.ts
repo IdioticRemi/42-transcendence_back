@@ -7,6 +7,7 @@ import { BlockedEntity } from './entities/blocked.entity';
 import { FriendEntity } from './entities/friend.entity';
 import { UserEntity } from './entities/user.entity';
 import * as fs from 'fs';
+import { defaultAvatar } from 'lib';
 
 
 
@@ -79,9 +80,9 @@ export class UsersService {
 
 	async updateAvatar(user: string, path: string) {
 		console.log("updating", user, path);
-		// checks if previous avatar registered
+		// checks if previous uploaded avatar
 		const userResult = await this.getUserByUsername(user);
-		if (userResult.img_path.length !== 0)
+		if (userResult.img_path !== defaultAvatar)
 		{
 			// delete previous avatar 
 			try {

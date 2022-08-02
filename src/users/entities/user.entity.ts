@@ -19,7 +19,7 @@ export class UserEntity {
 	img: Uint8Array;
 
 	@Column({
-		default: ""
+		default: "img/default_avatar.jpg"
 	})
 	img_path: string;
 

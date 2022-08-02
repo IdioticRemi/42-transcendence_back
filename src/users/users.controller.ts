@@ -10,6 +10,7 @@ import { diskStorage, Multer } from 'multer';
 import { extname, join } from 'path';
 import { maxUploadSize } from 'lib';
 import { createReadStream } from 'fs';
+import { Stream } from 'stream';
 
 @Controller('users')
 export class UsersController {
@@ -79,12 +80,18 @@ export class UsersController {
 		return res.sendFile(userResult.img_path, {root: './'});
 	}
 
+	// readStream version
 	// @Get('avatar/:user')
-	// async getFile(
-	// 	@Param('user') user: string
-	// ): Promise<StreamableFile> {
+	// async getFileStream(
+	// 	@Param('user') user: string,
+	// 	@Res() res
+	// ): Promise<void> {
 	// 	const userResult = await this.usersService.getUserByUsername(user);
+	// 	const fileType = extname(userResult.img_path);
 	// 	const file = createReadStream(join(process.cwd(), userResult.img_path))
-	// 	return new StreamableFile(file);
+	// 	res.set({
+	// 		'Content-Type': 'image/' + fileType.substring(1)
+	// 	});
+	// 	file.pipe(res);
 	// }
 }
