@@ -67,15 +67,20 @@ export class UsersService {
 		return this.usersRepository.softRemove(toRemove);
 	}
 
-	async updateAvatar(user: string, path: string) {
-		console.log("updating", user, path);
-		// checks if previous avatar registered
+	async getUserByUsername(user: string): Promise<UserEntity> {
 		const userResult = await this.usersRepository.findOne({
 			where: 
 			{"username": user},
 		});
 		if (!userResult)
 			throw new NotFoundException(`${user} is not registered`);
+		return userResult;
+	}
+
+	async updateAvatar(user: string, path: string) {
+		console.log("updating", user, path);
+		// checks if previous avatar registered
+		const userResult = await this.getUserByUsername(user);
 		if (userResult.img_path.length !== 0)
 		{
 			// delete previous avatar 
