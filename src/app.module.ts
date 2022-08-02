@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, UploadedFiles } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
@@ -14,6 +14,7 @@ import { AuthorizationModule } from './authorization/authorization.module';
 import { AuthorizationStrategy } from './authorization/authorization.strategy';
 import { ConfigModule } from '@nestjs/config';
 import { config } from 'process';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -31,6 +32,9 @@ import { config } from 'process';
     UsersModule,
     ChannelModule,
     AuthorizationModule,
+    MulterModule.register({
+      dest: './uploads',
+    })
   ],
   controllers: [AppController],
   providers: [AppService, SocketGateway, AuthorizationStrategy],

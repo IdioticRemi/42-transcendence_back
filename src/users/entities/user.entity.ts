@@ -13,15 +13,27 @@ export class UserEntity {
 	token: string;
 
 	@Column({
-		default: "img/default_avatar.jpeg"
+		type: 'bytea',
+		default: ""
 	})
-	avatar: string;
+	img: Uint8Array;
+
+	@Column({
+		default: "img/default_avatar.jpg"
+	})
+	img_path: string;
 
 	@Column({
 		length: 16,
 		unique: true
 	})
 	username: string;
+
+	@Column({
+		default: "",
+		length: 16,
+	})
+	nickname: string;
 
 	@JoinTable()
 	@ManyToMany( () => ChannelEntity )
