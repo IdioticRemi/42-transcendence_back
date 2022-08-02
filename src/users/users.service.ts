@@ -81,6 +81,7 @@ export class UsersService {
 	async updateAvatar(user: string, path: string) {
 		console.log("updating", user, path);
 		// checks if previous uploaded avatar and filename is different
+		console.log(path);
 		const userResult = await this.getUserByUsername(user);
 		if (userResult.img_path !== defaultAvatar && userResult.img_path !== path)
 		{

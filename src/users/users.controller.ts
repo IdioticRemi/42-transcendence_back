@@ -51,13 +51,13 @@ export class UsersController {
 		storage: diskStorage({
 			destination: './uploads',
 			filename:  function (req, file, cb) { 
-				cb(null, req.params.user + extname(file.originalname));
+				cb(null, req.params.user + extname(file.originalname).toLowerCase());
 			  }
 			}),
 		limits: { fileSize: maxUploadSize },
 		fileFilter: function fileFilter(req, file, cb){
-			if(file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg'){
-				return cb(new UnsupportedMediaTypeException('Only jpg or png files are accepted'), false);
+			if(file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg'){
+				return cb(new UnsupportedMediaTypeException('Only jpg/jpeg or png files are accepted'), false);
 			 }
 			 cb(null, true);
 		 },
