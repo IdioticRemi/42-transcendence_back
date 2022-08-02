@@ -6,6 +6,7 @@ import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { BlockedEntity } from './entities/blocked.entity';
 import { FriendEntity } from './entities/friend.entity';
 import { UserEntity } from './entities/user.entity';
+import * as fs from 'fs';
 
 
 
@@ -68,6 +69,24 @@ export class UsersService {
 
 	async updateAvatar(user: string, path: string) {
 		console.log("updating", user, path);
+		// checks if previous avatar registered
+		const userResult = await this.usersRepository.findOne({
+			where: 
+			{"username": user},
+		});
+		if (!userResult)
+			throw new NotFoundException(`${user} is not registered`);
+		if (userResult.img_path.length !== 0)
+		{
+			// delete previous avatar 
+			try {
+				fs.unlinkSync(userResult.img_path);
+				//file removed
+			} catch(err) {
+				console.error(err);
+			}
+		}
+		// register new avatar's path in DB
 		await this.usersRepository.update({username: user}, {img_path: path})
 	}
 
