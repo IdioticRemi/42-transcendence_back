@@ -5,7 +5,7 @@ import { MResponse } from 'src/MResponse';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
-import { Express } from 'express';
+import { Express, Response } from 'express';
 import { diskStorage, Multer } from 'multer';
 import { extname, join } from 'path';
 import { maxUploadSize } from 'lib';
@@ -56,7 +56,7 @@ export class UsersController {
 			}),
 		limits: { fileSize: maxUploadSize },
 		fileFilter: function fileFilter(req, file, cb){
-			if(file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg'){
+			if(file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg') {
 				return cb(new UnsupportedMediaTypeException('Only jpg/jpeg or png files are accepted'), false);
 			 }
 			 cb(null, true);
@@ -74,10 +74,10 @@ export class UsersController {
 	@Get('avatar/:user')
 	async getFile(
 		@Param('user') user: string,
-		@Res() res
-	): Promise<StreamableFile> {
+		@Res() res: Response
+	): Promise<void> {
 		const userResult = await this.usersService.getUserByUsername(user);
-		return res.sendFile(userResult.img_path, {root: './'});
+		res.sendFile(userResult.img_path, {root: './'});
 	}
 
 	// readStream version

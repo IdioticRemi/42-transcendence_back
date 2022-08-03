@@ -10,6 +10,6 @@ import { BlockedEntity } from './entities/blocked.entity';
   imports: [TypeOrmModule.forFeature([UserEntity, FriendEntity, BlockedEntity])],
   controllers: [UsersController],
   providers: [UsersService],
-  exports: [TypeOrmModule]
+  exports: [UsersService]
 })
 export class UsersModule {}

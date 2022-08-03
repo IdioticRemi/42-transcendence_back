@@ -7,13 +7,15 @@ import { JsonResponseInterface } from 'lib/api.objects';
 import { GetUserDto } from 'src/users/dto/user.dto';
 import * as fs from 'fs';
 import axios from 'axios';
+import { UsersService } from 'src/users/users.service';
 
 
 @Injectable()
 export class AuthorizationService {
 	constructor(
 		@InjectRepository(UserEntity)
-		private userRepository: Repository<UserEntity>
+		private userRepository: Repository<UserEntity>,
+		private usersService: UsersService
 	) {}
 
 	async getToken(code: string, res: Response): Promise<string> {
@@ -70,29 +72,27 @@ export class AuthorizationService {
 			"Access-Control-Allow-Headers": "Content-Type, Authorization",
 		  },
 		};
-		// fetch("https://api.intra.42.fr/v2/users?filter[login]=dburgun", options)
-		
 		return fetch("https://api.intra.42.fr/v2/me", options)
-		.then(async (response) => {
-		  // console.log(response);
-		  if (!response.ok) {
-			return Promise.reject(`Error ${response.status}: Failed to get user infos`);
-		  }
-		  let json = await response.json() as GetUserDto;
-		//   console.log("user info's response:", json);
-		  if (json.hasOwnProperty('id') && json.hasOwnProperty('login')){
-			const id42 = json.id;
-			const username = json.login;
-			console.log("id:", id42, "username:", username, "token:", token);
-			return this.logUser(id42, username, token);
-		  }
-		  else
-		  	return undefined;
-		})
-		.catch((error) => {
-		  // console.log(error);
-		  return undefined;
-		});
+			.then(async (response) => {
+			// console.log(response);
+			if (!response.ok) {
+				return Promise.reject(`Error ${response.status}: Failed to get user infos`);
+			}
+			let json = await response.json() as GetUserDto;
+			//   console.log("user info's response:", json);
+			if (json.hasOwnProperty('id') && json.hasOwnProperty('login')){
+				const id42 = json.id;
+				const username = json.login;
+				console.log("id:", id42, "username:", username, "token:", token);
+				return this.logUser(id42, username, token);
+			}
+			else
+				return undefined;
+			})
+			.catch((error) => {
+				console.log(error);
+				return undefined;
+			});
 	  }
 	
 	  async logUser(id42: string, username: string, token: string): Promise<Partial<UserEntity>> {
@@ -109,13 +109,26 @@ export class AuthorizationService {
 			"username": username,
 			"token": token
 		  })
-		  .catch(() => {console.log("cannot register user", username)});
+		  	.catch(() => {console.log("cannot register user", username)});
 		  // download 42 intra's picture
 		  console.log(`downloading intra picture from https://cdn.intra.42.fr/users/${username}.jpg`);
-		  const writer = fs.createWriteStream(`./uploads/${username}.jpg`);
+		  const imgPath = `./uploads/${username}.jpg`;
 		  const url = `https://cdn.intra.42.fr/users/${username}.jpg`;
-		  const response = await axios({url, method: 'GET', responseType: 'stream'})
-		  response.data.pipe(writer);
+		  axios({url, method: 'GET', responseType: 'stream'})
+			.then((response) => {
+				if (response.status === 200)
+				{
+					// save file on server
+					const writer = fs.createWriteStream(imgPath);
+					response.data.pipe(writer);
+		
+					// update DB with avatar's path
+					this.usersService.updateAvatar(username, imgPath);
+				}
+			})
+			.catch(() => {
+				console.log("impossible to download 42's picture");
+			});
 		  return newUser as Partial<UserEntity>;
 		}
 		console.log(`${user.username} is already registered in the database`);
