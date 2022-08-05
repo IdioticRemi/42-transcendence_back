@@ -15,6 +15,8 @@ import { AuthorizationStrategy } from './authorization/authorization.strategy';
 import { ConfigModule } from '@nestjs/config';
 import { config } from 'process';
 import { MulterModule } from '@nestjs/platform-express';
+import { GameModule } from './game/game.module';
+import { GameEntity } from './game/entities/game.entity';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -25,7 +27,7 @@ import { MulterModule } from '@nestjs/platform-express';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [UserEntity, FriendEntity, BlockedEntity, ChannelEntity],
+      entities: [UserEntity, FriendEntity, BlockedEntity, ChannelEntity, GameEntity],
       // synchronize: true => dev only
       synchronize: true,
     }),
@@ -34,7 +36,8 @@ import { MulterModule } from '@nestjs/platform-express';
     AuthorizationModule,
     MulterModule.register({
       dest: './uploads',
-    })
+    }),
+    GameModule
   ],
   controllers: [AppController],
   providers: [AppService, SocketGateway, AuthorizationStrategy],

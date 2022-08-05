@@ -2,8 +2,11 @@
 .env
 
 # Docker folders
-postgres
-pgadmin
+postgres/*
+pgadmin/*
+
+# Upload folders
+uploads/*
 
 # compiled output
 dist
@@ -41,4 +44,3 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-uploads/*
