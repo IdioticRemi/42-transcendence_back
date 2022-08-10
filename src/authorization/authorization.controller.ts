@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, Res } from '@nestjs/common';
+import { Controller, Get, HttpException, Param, Post, Query, Req, Res } from '@nestjs/common';
 import { AuthorizationService } from './authorization.service';
 
 @Controller('auth')
@@ -14,13 +14,27 @@ export class AuthorizationController {
     );
   }
 
+  @Get('check')
+  async CheckRequest(
+    @Query('token') token: string
+  ) {
+    console.debug(token);
+    const user = await this.authorizationService.getUser(token);
+    if (user) {
+      return user;
+    } else {
+      return new HttpException("Forbidden access (Invalid Token)", 403)
+    }
+  }
+
+
   @Get('42Auth/callback')
   async AuthRedirect(@Query('code') code, @Res() res) {
     console.log('Callback from 42 API', 'code retrieved:', code);
     const user = await this.authorizationService.authenticate(code, res);
     console.log(user);
     if (user !== undefined)
-      res.redirect(`http://localhost:8081/home?token=${user.token}`);
-    else res.redirect('http://localhost:8081?login=false');
+      res.redirect(`http://localhost:8081/?token=${user.token}`);
+    else res.redirect('http://localhost:8081?token=null');
   }
 }

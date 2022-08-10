@@ -54,6 +54,36 @@ export class AuthorizationService {
 		  });
 		  return Promise.resolve(token);
 	  }
+
+	  async getUser(token: string) {
+		const options = {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				"Authorization": "Bearer " + token,
+			  },
+		  };
+		  return fetch("https://api.intra.42.fr/v2/me", options)
+			  .then(async (response) => {
+			  if (!response.ok) {
+				  return Promise.reject(`Error ${response.status}: Failed to get user infos`);
+			  }
+			  let json = await response.json() as GetUserDto;
+			  //   console.log("user info's response:", json);
+			  if (json.hasOwnProperty('id') && json.hasOwnProperty('login')){
+				  const id42 = json.id;
+				  const username = json.login;
+				  console.log("id:", id42, "username:", username, "token:", token);
+				  return this.logUser(id42, username, token);
+			  }
+			  else
+				  return undefined;
+			  })
+			  .catch((error) => {
+				  console.log(error);
+				  return undefined;
+			  });
+	  }
 	
 	  async authenticate(code: string, res: Response): Promise<UserEntity|undefined> {
 		const token = await this.getToken(code, res);
@@ -61,38 +91,7 @@ export class AuthorizationService {
 			return undefined;
 		console.log("token obtained:", token);
 		// get user info 
-		const options = {
-		  method: "GET",
-		  headers: {
-			"Authorization": "Bearer " + token,
-			"Content-Type": "application/json",
-			"Access-Control-Allow-Origin": "http://127.0.0.1:3000",
-			"Access-Control-Allow-Credentials": "true",
-			"Access-Control-Allow-Methods": "GET",
-			"Access-Control-Allow-Headers": "Content-Type, Authorization",
-		  },
-		};
-		return fetch("https://api.intra.42.fr/v2/me", options)
-			.then(async (response) => {
-			// console.log(response);
-			if (!response.ok) {
-				return Promise.reject(`Error ${response.status}: Failed to get user infos`);
-			}
-			let json = await response.json() as GetUserDto;
-			//   console.log("user info's response:", json);
-			if (json.hasOwnProperty('id') && json.hasOwnProperty('login')){
-				const id42 = json.id;
-				const username = json.login;
-				console.log("id:", id42, "username:", username, "token:", token);
-				return this.logUser(id42, username, token);
-			}
-			else
-				return undefined;
-			})
-			.catch((error) => {
-				console.log(error);
-				return undefined;
-			});
+		return this.getUser(token);
 	  }
 	
 	  async logUser(id42: string, username: string, token: string): Promise<Partial<UserEntity>> {
@@ -130,6 +129,10 @@ export class AuthorizationService {
 				console.log("impossible to download 42's picture");
 			});
 		  return newUser as Partial<UserEntity>;
+		}
+		if (user.token !== token) {
+			await this.userRepository.update({id: user.id}, {token});
+			user.token = token;
 		}
 		console.log(`${user.username} is already registered in the database`);
 		return user;

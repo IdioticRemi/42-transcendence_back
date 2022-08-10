@@ -13,12 +13,6 @@ export class UserEntity {
 	token: string;
 
 	@Column({
-		type: 'bytea',
-		default: ""
-	})
-	img: Uint8Array;
-
-	@Column({
 		default: "img/default_avatar.jpg"
 	})
 	img_path: string;
