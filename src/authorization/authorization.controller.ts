@@ -1,11 +1,18 @@
-import { Controller, Get, HttpException, Param, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpException,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { AuthorizationService } from './authorization.service';
 
 @Controller('auth')
 export class AuthorizationController {
-  constructor(
-    private authorizationService: AuthorizationService
-  ) {}
+  constructor(private authorizationService: AuthorizationService) {}
 
   @Get()
   AuthRequest(@Res() res) {
@@ -15,19 +22,16 @@ export class AuthorizationController {
   }
 
   @Get('check')
-  async CheckRequest(
-    @Query('token') token: string
-  ) {
+  async CheckRequest(@Query('token') token: string) {
     console.debug(token);
     const user = await this.authorizationService.getUser(token);
     if (user) {
       delete user.token;
       return user;
     } else {
-      return new HttpException("Forbidden access (Invalid Token)", 403)
+      throw new HttpException('Forbidden access (Invalid Token)', 403);
     }
   }
-
 
   @Get('42Auth/callback')
   async AuthRedirect(@Query('code') code, @Res() res) {
