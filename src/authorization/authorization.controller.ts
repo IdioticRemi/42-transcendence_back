@@ -21,6 +21,7 @@ export class AuthorizationController {
     console.debug(token);
     const user = await this.authorizationService.getUser(token);
     if (user) {
+      delete user.token;
       return user;
     } else {
       return new HttpException("Forbidden access (Invalid Token)", 403)

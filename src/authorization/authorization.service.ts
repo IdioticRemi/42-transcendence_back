@@ -74,7 +74,7 @@ export class AuthorizationService {
 				  const id42 = json.id;
 				  const username = json.login;
 				  console.log("id:", id42, "username:", username, "token:", token);
-				  return this.logUser(id42, username, token);
+				  return await this.logUser(id42, username, token);
 			  }
 			  else
 				  return undefined;
