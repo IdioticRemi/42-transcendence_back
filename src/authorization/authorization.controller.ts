@@ -27,9 +27,17 @@ export class AuthorizationController {
     const user = await this.authorizationService.getUser(token);
     if (user) {
       delete user.token;
-      return user;
+      return {
+        message: 'Token is valid',
+        content: user,
+        error: false,
+      };
     } else {
-      throw new HttpException('Forbidden access (Invalid Token)', 403);
+      return {
+        message: 'Token is invalid or has expired',
+        content: null,
+        error: true,
+      };
     }
   }
 
