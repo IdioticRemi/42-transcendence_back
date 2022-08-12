@@ -7,8 +7,10 @@ import { ChannelEntity } from './entities/channel.entity';
 export class ChannelService {
 	constructor(
 		@InjectRepository(ChannelEntity)
-		private channelRepository: Repository<ChannelEntity>
-	) {
-		
-	}
+		private channelRepository: Repository<ChannelEntity>,
+	) {}
+
+
+
+
 }

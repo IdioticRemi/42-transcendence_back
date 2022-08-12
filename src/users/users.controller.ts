@@ -11,6 +11,7 @@ import { extname, join } from 'path';
 import { maxUploadSize } from 'lib';
 import { createReadStream } from 'fs';
 import { Stream } from 'stream';
+import { ChannelEntity } from 'src/channel/entities/channel.entity';
 
 @Controller('users')
 export class UsersController {
@@ -94,4 +95,29 @@ export class UsersController {
 	// 	});
 	// 	file.pipe(res);
 	// }
+
+	//TODO : test with postman
+	@Get(':userid/channels')
+	async GetSubscribedChannels(
+		@Param('userid', ParseIntPipe) userid: number
+	): Promise<ChannelEntity[]> {
+		return this.usersService.getSubscribedChannels(userid);
+	}
+
+	//TODO : test with postman
+	@Get(':userid/friends')
+	async GetFriends(
+		@Param('userid', ParseIntPipe) userid: number
+	): Promise<UserEntity[]> {
+		return this.usersService.getFriends(userid);
+	}
+
+	//TODO : test with postman
+	@Get(':userid/blocked')
+	async GetBlocked(
+		@Param('userid', ParseIntPipe) userid: number
+	): Promise<UserEntity[]> {
+		return this.usersService.getBlocked(userid);
+	}
+
 }

@@ -8,6 +8,7 @@ import { FriendEntity } from './entities/friend.entity';
 import { UserEntity } from './entities/user.entity';
 import * as fs from 'fs';
 import { defaultAvatar } from 'lib';
+import { ChannelEntity } from 'src/channel/entities/channel.entity';
 
 
 
@@ -98,12 +99,34 @@ export class UsersService {
 		await this.usersRepository.update({username: user}, {img_path: path})
 	}
 
-	async getFriends(): Promise<FriendEntity[]> {
-		return await this.friendsRepository.find();
+	async getFriends(userid: number): Promise<UserEntity[]> {
+		const user = await this.usersRepository.findOne({
+			where: {id: userid},
+			relations: ['friends']
+		});
+		if (!user)
+			return [];
+		return user.friends;
 	}
 
-	async getBlocked(): Promise<BlockedEntity[]> {
-		return await this.blockedRepository.find();
+	async getBlocked(userid: number): Promise<UserEntity[]> {
+		const user = await this.usersRepository.findOne({
+			where: {id: userid},
+			relations: ['blocked']
+		});
+		if (!user)
+			return [];
+		return user.blocked;
+	}
+
+	async getSubscribedChannels(userid: number): Promise<ChannelEntity[]> {
+		const user = await this.usersRepository.findOne({
+			where: {id: userid},
+			relations: ['channels']
+		});
+		if (!user)
+			return [];
+		return user.channels;
 	}
 
 }

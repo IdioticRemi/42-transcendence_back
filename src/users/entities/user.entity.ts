@@ -1,5 +1,5 @@
 import { ChannelEntity } from "src/channel/entities/channel.entity";
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, OneToMany, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 @Entity('UserEntity')
 export class UserEntity {
@@ -30,8 +30,20 @@ export class UserEntity {
 	nickname: string;
 
 	@JoinTable()
-	@ManyToMany( () => ChannelEntity )
+	@ManyToMany( () => ChannelEntity, (channel) => channel.users )
 	channels: ChannelEntity[];
+
+	@JoinTable()
+	@ManyToMany( () => ChannelEntity, (channel) => channel.operators )
+	channels_op: ChannelEntity[];
+
+	@JoinTable({ joinColumn: {name: 'UserEntity_id_1'}})
+	@ManyToMany( () => UserEntity)
+	friends: UserEntity[]
+
+	@JoinTable({ joinColumn: {name: 'UserEntity_id_1'}})
+	@ManyToMany( () => UserEntity)
+	blocked: UserEntity[]
 
 	@CreateDateColumn()
 	createdAt: Date;

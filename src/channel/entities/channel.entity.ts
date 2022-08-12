@@ -11,11 +11,11 @@ export class ChannelEntity {
 	name: string;
 
 	@JoinColumn()
-	@ManyToMany( () => UserEntity, (user) => user.id)
+	@ManyToMany( () => UserEntity, (user) => user.channels)
 	users: UserEntity[];
 
 	@JoinColumn()
-	@ManyToMany( () => UserEntity, (user) => user.id )
+	@ManyToMany( () => UserEntity, (user) => user.channels_op )
 	operators: UserEntity[];
 
 }

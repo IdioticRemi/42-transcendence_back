@@ -8,11 +8,11 @@ export class FriendEntity {
 	id: number;
 
 	@JoinColumn()
-	@OneToOne( (type) => UserEntity, (user) => user.id )
+	@OneToOne( () => UserEntity, (user) => user.id )
 	userId: UserEntity;
 
 	@JoinColumn()
-	@OneToOne( (type) => UserEntity, (friend) => friend.id )
+	@OneToOne( () => UserEntity, (user) => user.id )
 	friendId: UserEntity;
 
 }
