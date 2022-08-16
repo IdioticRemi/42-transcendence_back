@@ -9,7 +9,12 @@ export class GameQueueEntity {
 	id: number;
 
 	@Column()
-	user: UserEntity;
+	userId: number;
+
+	@Column({
+		default: null,
+	})
+	targetId: number;
 
 	@Column({
 		default: GameType.CLASSIC

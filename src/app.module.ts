@@ -17,6 +17,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { GameModule } from './game/game.module';
 import { GameEntity } from './game/entities/game.entity';
 import { BannedEntity } from './channel/entities/banned.entity';
+import { GameQueueEntity } from './game/entities/game.queue.entity';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -27,7 +28,7 @@ import { BannedEntity } from './channel/entities/banned.entity';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [UserEntity, BlockedEntity, ChannelEntity, GameEntity, BannedEntity],
+      entities: [UserEntity, BlockedEntity, ChannelEntity, GameEntity, BannedEntity, GameQueueEntity],
       // synchronize: true => dev only
       synchronize: true,
     }),
