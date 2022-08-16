@@ -1,5 +1,5 @@
 import { UserEntity } from "src/users/entities/user.entity";
-import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { BannedEntity } from "./banned.entity";
 
 @Entity('ChannelEntity')
@@ -13,8 +13,9 @@ export class ChannelEntity {
 	})
 	name: string;
 
-	@Column()
-	owner: string;
+	// @JoinColumn()
+	@ManyToOne( () => UserEntity )
+	owner: UserEntity;
 
 	@Column({
 		default: false
