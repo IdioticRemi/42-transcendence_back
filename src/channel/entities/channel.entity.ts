@@ -27,7 +27,7 @@ export class ChannelEntity {
 	password: string;
 
 	@JoinTable()
-	@ManyToMany( () => BannedEntity, banned => banned.channel )
+	@ManyToMany( () => BannedEntity )
 	banned: BannedEntity[]
 
 	@JoinColumn()

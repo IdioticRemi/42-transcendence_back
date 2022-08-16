@@ -5,7 +5,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SocketGateway } from './socket.gateway';
 import { BlockedEntity } from './users/entities/blocked.entity';
-import { FriendEntity } from './users/entities/friend.entity';
 import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 import { ChannelModule } from './channel/channel.module';
@@ -28,7 +27,7 @@ import { BannedEntity } from './channel/entities/banned.entity';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [UserEntity, FriendEntity, BlockedEntity, ChannelEntity, GameEntity, BannedEntity],
+      entities: [UserEntity, BlockedEntity, ChannelEntity, GameEntity, BannedEntity],
       // synchronize: true => dev only
       synchronize: true,
     }),

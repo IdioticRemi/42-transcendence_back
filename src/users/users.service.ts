@@ -4,7 +4,6 @@ import { MResponse } from 'src/MResponse';
 import { Repository } from 'typeorm';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { BlockedEntity } from './entities/blocked.entity';
-import { FriendEntity } from './entities/friend.entity';
 import { UserEntity } from './entities/user.entity';
 import * as fs from 'fs';
 import { defaultAvatar } from 'lib';
@@ -18,8 +17,6 @@ export class UsersService {
 	constructor(
 		@InjectRepository(UserEntity)
 		private usersRepository: Repository<UserEntity>,
-		@InjectRepository(FriendEntity)
-		private friendsRepository: Repository<FriendEntity>,
 		@InjectRepository(BlockedEntity)
 		private blockedRepository: Repository<BlockedEntity>
 	) {}
