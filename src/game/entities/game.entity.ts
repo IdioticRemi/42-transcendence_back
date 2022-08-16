@@ -7,6 +7,11 @@ export enum GameStatus {
 	FINISHED = 2,
 }
 
+export enum GameType {
+	CLASSIC = 0,
+	CUSTOM = 1,
+}
+
 @Entity('GameEntity')
 export class GameEntity {
 	
@@ -23,6 +28,11 @@ export class GameEntity {
 		default: 0
 	})
 	score: number;
+
+	@Column({
+		default: GameType.CLASSIC
+	})
+	type: number;
 
 	@Column({
 		default: GameStatus.PENDING
