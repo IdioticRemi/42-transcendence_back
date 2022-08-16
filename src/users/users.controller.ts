@@ -112,6 +112,22 @@ export class UsersController {
 		return this.usersService.getFriends(userid);
 	}
 
+	@Post(':userid/friends')
+	async AddFriend(
+		@Param('userid', ParseIntPipe) userId: number,
+		@Body('friendId') friendId: string
+	) : Promise<MResponse<UserEntity>> {
+		return this.usersService.addFriend(userId, parseInt(friendId));
+	}
+
+	@Delete(':userid/friends')
+	async deleteFriend(
+		@Param('userid', ParseIntPipe) userId: number,
+		@Body('friendId') friendId: string
+	) : Promise<MResponse<UserEntity>> {
+		return this.usersService.deleteFriend(userId, parseInt(friendId));
+	}
+
 	//TODO : test with postman
 	@Get(':userid/blocked')
 	async GetBlocked(

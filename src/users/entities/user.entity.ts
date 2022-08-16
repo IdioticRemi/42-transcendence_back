@@ -38,11 +38,11 @@ export class UserEntity {
 	channels_op: ChannelEntity[];
 
 	@JoinTable({ joinColumn: {name: 'UserEntity_id_1'}})
-	@ManyToMany( () => UserEntity)
+	@ManyToMany( () => UserEntity, { cascade: true })
 	friends: UserEntity[]
 
 	@JoinTable({ joinColumn: {name: 'UserEntity_id_1'}})
-	@ManyToMany( () => UserEntity)
+	@ManyToMany( () => UserEntity, { cascade: true })
 	blocked: UserEntity[]
 
 	@CreateDateColumn()

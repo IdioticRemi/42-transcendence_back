@@ -38,14 +38,15 @@ export class UsersService {
 		return toFind;
 	}
 
-	async getUserById(id: number): Promise<UserEntity> {
-		const userResult = await this.usersRepository.findOne({
+	async getUserById(id: number, relations: string[] = []): Promise<UserEntity> {
+		const userResult = await this.usersRepository.find({
 			where: 
 			{"id": id},
+			relations: relations
 		});
 		if (userResult === undefined)
 			throw new NotFoundException(`the user of id=${id} does not exist`);
-		return userResult;
+		return userResult[0];
 	}
 
 	async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
@@ -127,6 +128,90 @@ export class UsersService {
 		if (!user)
 			return [];
 		return user.channels;
+	}
+
+	async addFriend(userId: number, friendId: number): Promise<MResponse<UserEntity>> {
+		const user = await this.getUserById(userId, ['friends', 'blocked']);
+		const friend = await this.getUserById(friendId, ['friends', 'blocked']);
+
+		if (!user || !friend) {
+			return {
+				"status": "error",
+				"message": "target or user does not exist",
+			}
+		}
+		//check if already friends
+		if (user.friends.find((f) => friend.id === f.id)) {
+			return {
+				"status": "error",
+				"message": "target is already the user's friend",
+			}
+		}
+
+		// check if friend has blocked the user
+		if (friend.blocked.find((f) => user.id === f.id)) {
+			return {
+				"status": "error",
+				"message": "user is blocked by target",
+			}
+		}
+		// save copies
+		const user_cpy = Object.assign({}, user) as UserEntity;
+		const friend_cpy = Object.assign({}, friend) as UserEntity;
+
+		// remove circular references
+		delete user_cpy.friends;
+		delete friend_cpy.friends;
+		delete user_cpy.blocked;
+		delete friend_cpy.blocked;
+
+		// save to database
+		user.friends.push(friend_cpy);
+		friend.friends.push(user_cpy);
+
+		await this.usersRepository.save(user);
+		await this.usersRepository.save(friend);
+
+		return {
+			"status": "success",
+			"payload": user
+		}
+	}
+
+	async deleteFriend(userId: number, friendId: number): Promise<MResponse<UserEntity>> {
+		const user = await this.getUserById(userId, ['friends']);
+		const friend = await this.getUserById(friendId, ['friends']);
+
+		// check if user and friend are in the database
+		if (!user || !friend) {
+			return {
+				"status": "error",
+				"message": "target or user does not exist",
+			}
+		}
+
+		const target = user.friends.find((f) => friend.id === f.id);
+		//check if really friends
+		if (!target) {
+			return {
+				"status": "error",
+				"message": "target is not the user's friend",
+			}
+		}
+
+		// user side friend removal
+		user.friends.splice(user.friends.indexOf(target), 1);
+		await this.usersRepository.save(user);
+
+		// friend side friend removal
+		const friend_target = friend.friends.find((f) => user.id === f.id);
+		friend.friends.splice(friend.friends.indexOf(friend_target), 1);
+		await this.usersRepository.save(friend);
+		
+		return {
+			"status": "success",
+			"payload": user
+		}
 	}
 
 }
