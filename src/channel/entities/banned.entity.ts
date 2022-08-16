@@ -2,7 +2,7 @@ import { UserEntity } from "src/users/entities/user.entity";
 import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ChannelEntity } from "./channel.entity";
 
-@Entity()
+@Entity('BannedEntity')
 export class BannedEntity {
 
 	@PrimaryGeneratedColumn()
