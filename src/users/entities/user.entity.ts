@@ -2,6 +2,12 @@ import { ChannelEntity } from "src/channel/entities/channel.entity";
 import { GameEntity } from "src/game/entities/game.entity";
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, OneToMany, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
+export enum UserStatus {
+	OFFLINE = 0,
+	ONLINE = 1,
+	INGAME = 2,
+}
+
 @Entity('UserEntity')
 export class UserEntity {
 
@@ -29,6 +35,11 @@ export class UserEntity {
 		length: 16,
 	})
 	nickname: string;
+
+	@Column({
+		default: UserStatus.OFFLINE
+	})
+	status: number;
 
 	@JoinTable()
 	@ManyToMany( () => ChannelEntity, (channel) => channel.users )
