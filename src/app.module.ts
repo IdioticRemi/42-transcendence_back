@@ -18,6 +18,7 @@ import { GameModule } from './game/game.module';
 import { GameEntity } from './game/entities/game.entity';
 import { BannedEntity } from './channel/entities/banned.entity';
 import { GameQueueEntity } from './game/entities/game.queue.entity';
+import { MessageEntity } from './channel/entities/message.entity';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -28,7 +29,7 @@ import { GameQueueEntity } from './game/entities/game.queue.entity';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [UserEntity, BlockedEntity, ChannelEntity, GameEntity, BannedEntity, GameQueueEntity],
+      entities: [UserEntity, BlockedEntity, ChannelEntity, GameEntity, BannedEntity, GameQueueEntity, MessageEntity],
       // synchronize: true => dev only
       synchronize: true,
     }),

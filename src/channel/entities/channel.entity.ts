@@ -1,6 +1,7 @@
 import { UserEntity } from "src/users/entities/user.entity";
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { BannedEntity } from "./banned.entity";
+import { MessageEntity } from "./message.entity";
 
 @Entity('ChannelEntity')
 export class ChannelEntity {
@@ -39,5 +40,7 @@ export class ChannelEntity {
 	@ManyToMany( () => UserEntity )
 	admins: UserEntity[];
 
+	@OneToMany( () => MessageEntity, message => message.channel)
+	messages: MessageEntity[];
 
 }
