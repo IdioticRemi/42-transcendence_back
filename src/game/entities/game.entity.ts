@@ -1,4 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { UserEntity } from "src/users/entities/user.entity";
+import { Column, Entity, JoinColumn, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+
+export enum GameStatus {
+	PENDING = 0,
+	RUNNING = 1,
+	FINISHED = 2,
+}
 
 @Entity('GameEntity')
 export class GameEntity {
@@ -6,24 +13,20 @@ export class GameEntity {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@Column()
-	firstPlayerId: number;
+	@ManyToOne( () => UserEntity, user => user.games)
+	player: UserEntity;
 
-	@Column()
-	secondPlayerId: number;
-
-	@Column({
-		default: 0
-	})
-	firstPlayerScore: number;
+	@OneToOne( () => GameEntity, game => game.opponent)
+	opponent: GameEntity;
 
 	@Column({
 		default: 0
 	})
-	secondPlayerScore: number;
+	score: number;
 
 	@Column({
-		default: 'in progress'
+		default: GameStatus.PENDING
 	})
-	status: string;
+	status: number;
+
 }

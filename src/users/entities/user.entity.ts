@@ -1,4 +1,5 @@
 import { ChannelEntity } from "src/channel/entities/channel.entity";
+import { GameEntity } from "src/game/entities/game.entity";
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, OneToMany, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 @Entity('UserEntity')
@@ -40,6 +41,10 @@ export class UserEntity {
 	@JoinTable({ joinColumn: {name: 'UserEntity_id_1'}})
 	@ManyToMany( () => UserEntity, { cascade: true })
 	blocked: UserEntity[]
+
+	@JoinTable()
+	@OneToMany( () => GameEntity, game => game.player )
+	games: GameEntity[];
 
 	@CreateDateColumn()
 	createdAt: Date;
