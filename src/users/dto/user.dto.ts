@@ -1,8 +1,9 @@
-import { Type } from "class-transformer";
-import { IsNotEmpty, IsNumber, IsString, Max, Min } from "class-validator";
+import { Expose, Type } from "class-transformer";
+import { IsDate, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 import { Unique } from "typeorm";
 
 export class AddUserDto {
+
 	@IsNotEmpty()
 	@IsString()
 	username: string;
@@ -10,11 +11,39 @@ export class AddUserDto {
 	@IsNotEmpty()
 	@IsString()
 	token: string;
-
 }
 
 export class SendUserDto {
-	username: string;
+
+	@Expose()
+	@IsNotEmpty()
+	@IsNumber()
+	id: number;
+
+	@Expose()
+	@IsNotEmpty()
+	@IsString()
+	username: string;	
+	
+	@Expose()
+	@IsOptional()
+	@IsString()
+	nickname: string;
+
+	@Expose()
+	@IsDate()
+	@IsNotEmpty()
+	createdAt: string;
+	
+	@Expose()
+	@IsDate()
+	@IsOptional()
+	updatedAt: string;
+	
+	@Expose()
+	@IsDate()
+	@IsOptional()
+	deletedAt: string;
 }
 
 export class GetUserDto {

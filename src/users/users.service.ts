@@ -9,6 +9,7 @@ import { UserEntity } from './entities/user.entity';
 import * as fs from 'fs';
 import { defaultAvatar } from 'lib';
 import { ChannelEntity } from 'src/channel/entities/channel.entity';
+import { plainToClass } from 'class-transformer';
 
 
 
@@ -54,7 +55,7 @@ export class UsersService {
 			.then((user) => {
 				return {
 					status: 'success',
-					payload: user,
+					payload: plainToClass(SendUserDto, user, {excludeExtraneousValues: true}),
 				} as MResponse<SendUserDto>;
 			}).catch(() => {
 				// throw new HttpException(`Username already registered`, 400);
@@ -100,14 +101,15 @@ export class UsersService {
 		await this.usersRepository.update({username: user}, {img_path: path})
 	}
 
-	async getFriends(userid: number): Promise<UserEntity[]> {
+	async getFriends(userid: number): Promise<SendUserDto[]> {
 		const user = await this.usersRepository.findOne({
 			where: {id: userid},
 			relations: ['friends']
 		});
 		if (!user)
 			return [];
-		return user.friends;
+
+		return user.friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true}));
 	}
 
 	async getBlocked(userid: number): Promise<UserEntity[]> {
@@ -130,7 +132,7 @@ export class UsersService {
 		return user.channels;
 	}
 
-	async addFriend(userId: number, friendId: number): Promise<MResponse<UserEntity>> {
+	async addFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
 		const user = await this.getUserById(userId, ['friends', 'blocked']);
 		const friend = await this.getUserById(friendId, ['friends', 'blocked']);
 
@@ -172,13 +174,15 @@ export class UsersService {
 		await this.usersRepository.save(user);
 		await this.usersRepository.save(friend);
 
+		delete user.token;
+
 		return {
 			"status": "success",
-			"payload": user
+			"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true})
 		}
 	}
 
-	async deleteFriend(userId: number, friendId: number): Promise<MResponse<UserEntity>> {
+	async deleteFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
 		const user = await this.getUserById(userId, ['friends']);
 		const friend = await this.getUserById(friendId, ['friends']);
 
@@ -207,10 +211,11 @@ export class UsersService {
 		const friend_target = friend.friends.find((f) => user.id === f.id);
 		friend.friends.splice(friend.friends.indexOf(friend_target), 1);
 		await this.usersRepository.save(friend);
+
 		
 		return {
 			"status": "success",
-			"payload": user
+			"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true}),
 		}
 	}
 

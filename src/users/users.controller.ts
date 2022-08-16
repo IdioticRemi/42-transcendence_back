@@ -12,6 +12,7 @@ import { maxUploadSize } from 'lib';
 import { createReadStream } from 'fs';
 import { Stream } from 'stream';
 import { ChannelEntity } from 'src/channel/entities/channel.entity';
+import { plainToClass } from 'class-transformer';
 
 @Controller('users')
 export class UsersController {
@@ -108,7 +109,7 @@ export class UsersController {
 	@Get(':userid/friends')
 	async GetFriends(
 		@Param('userid', ParseIntPipe) userid: number
-	): Promise<UserEntity[]> {
+	): Promise<SendUserDto[]> {
 		return this.usersService.getFriends(userid);
 	}
 
@@ -116,7 +117,7 @@ export class UsersController {
 	async AddFriend(
 		@Param('userid', ParseIntPipe) userId: number,
 		@Body('friendId') friendId: string
-	) : Promise<MResponse<UserEntity>> {
+	) : Promise<MResponse<SendUserDto>> {
 		return this.usersService.addFriend(userId, parseInt(friendId));
 	}
 
@@ -124,7 +125,7 @@ export class UsersController {
 	async deleteFriend(
 		@Param('userid', ParseIntPipe) userId: number,
 		@Body('friendId') friendId: string
-	) : Promise<MResponse<UserEntity>> {
+	) : Promise<MResponse<SendUserDto>> {
 		return this.usersService.deleteFriend(userId, parseInt(friendId));
 	}
 
@@ -132,8 +133,8 @@ export class UsersController {
 	@Get(':userid/blocked')
 	async GetBlocked(
 		@Param('userid', ParseIntPipe) userid: number
-	): Promise<UserEntity[]> {
-		return this.usersService.getBlocked(userid);
+	): Promise<SendUserDto[]> {
+		return (await this.usersService.getBlocked(userid)).map(b => plainToClass(SendUserDto, b, {excludeExtraneousValues: true}));
 	}
 
 }
