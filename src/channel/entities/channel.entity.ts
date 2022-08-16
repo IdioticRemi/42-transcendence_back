@@ -1,5 +1,6 @@
 import { UserEntity } from "src/users/entities/user.entity";
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BannedEntity } from "./banned.entity";
 
 @Entity('ChannelEntity')
 export class ChannelEntity {
@@ -26,15 +27,15 @@ export class ChannelEntity {
 	password: string;
 
 	@JoinTable()
-	@ManyToMany( () => UserEntity )
-	banned: UserEntity[]
+	@ManyToMany( () => BannedEntity, banned => banned.channel )
+	banned: BannedEntity[]
 
 	@JoinColumn()
 	@ManyToMany( () => UserEntity, (user) => user.channels)
 	users: UserEntity[];
 
 	@JoinColumn()
-	@ManyToMany( () => UserEntity, (user) => user.channels_op )
+	@ManyToMany( () => UserEntity )
 	admins: UserEntity[];
 
 
