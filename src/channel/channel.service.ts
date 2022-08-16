@@ -10,7 +10,9 @@ export class ChannelService {
 		private channelRepository: Repository<ChannelEntity>,
 	) {}
 
-
+	async getAllChannels() {
+		return await this.channelRepository.find();
+	}
 
 
 }

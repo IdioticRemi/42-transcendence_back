@@ -1,5 +1,5 @@
 import { UserEntity } from "src/users/entities/user.entity";
-import { Column, Entity, JoinColumn, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('ChannelEntity')
 export class ChannelEntity {
@@ -7,8 +7,27 @@ export class ChannelEntity {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@Column()
+	@Column({
+		unique: true
+	})
 	name: string;
+
+	@Column()
+	owner: string;
+
+	@Column({
+		default: false
+	})
+	isPrivate: boolean;
+
+	@Column({
+		default: ""
+	})
+	password: string;
+
+	@JoinTable()
+	@ManyToMany( () => UserEntity )
+	banned: UserEntity[]
 
 	@JoinColumn()
 	@ManyToMany( () => UserEntity, (user) => user.channels)
@@ -16,6 +35,7 @@ export class ChannelEntity {
 
 	@JoinColumn()
 	@ManyToMany( () => UserEntity, (user) => user.channels_op )
-	operators: UserEntity[];
+	admins: UserEntity[];
+
 
 }

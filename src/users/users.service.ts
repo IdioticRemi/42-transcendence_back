@@ -204,12 +204,11 @@ export class UsersService {
 		}
 
 		// user side friend removal
-		user.friends.splice(user.friends.indexOf(target), 1);
+		user.friends = user.friends.filter(f => f.id != friend.id);
 		await this.usersRepository.save(user);
 
 		// friend side friend removal
-		const friend_target = friend.friends.find((f) => user.id === f.id);
-		friend.friends.splice(friend.friends.indexOf(friend_target), 1);
+		friend.friends = friend.friends.filter(f => f.id != user.id);
 		await this.usersRepository.save(friend);
 
 		

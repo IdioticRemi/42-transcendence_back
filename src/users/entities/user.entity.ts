@@ -29,12 +29,15 @@ export class UserEntity {
 	})
 	nickname: string;
 
+
+	// A voir
 	@JoinTable()
 	@ManyToMany( () => ChannelEntity, (channel) => channel.users )
 	channels: ChannelEntity[];
 
+	// A voir
 	@JoinTable()
-	@ManyToMany( () => ChannelEntity, (channel) => channel.operators )
+	@ManyToMany( () => ChannelEntity, (channel) => channel.admins )
 	channels_op: ChannelEntity[];
 
 	@JoinTable({ joinColumn: {name: 'UserEntity_id_1'}})

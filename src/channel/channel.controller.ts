@@ -7,6 +7,11 @@ export class ChannelController {
 	constructor(
 		private channelService: ChannelService
 	) {}
+	
+	@Get()
+	async getAllChannels() {
+		return this.channelService.getAllChannels();
+	}
 
 
 }
