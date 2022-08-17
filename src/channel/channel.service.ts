@@ -45,7 +45,7 @@ export class ChannelService {
 		
 		// create channel in DB
 		const newChannel = this.channelRepository.create({
-			owner: userId,
+			ownerId: userId,
 			name: channelName,
 			password: password,
 			isPrivate: isPrivate
@@ -142,7 +142,6 @@ export class ChannelService {
 				message: 'this channel does not exist'
 			}
 		}
-		console.debug('adding message');
 
 		const newMessage = this.messageRepository.create(message)
 		console.debug(newMessage);

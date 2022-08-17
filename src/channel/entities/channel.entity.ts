@@ -20,7 +20,7 @@ export class ChannelEntity {
 
 	// TODO: A voir avec Remi
 	@Column()
-	owner: number;
+	ownerId: number;
 
 	@Column({
 		default: false
