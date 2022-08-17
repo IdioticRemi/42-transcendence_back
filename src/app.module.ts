@@ -1,4 +1,4 @@
-import { Module, UploadedFiles } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, UploadedFiles } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
@@ -9,16 +9,16 @@ import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 import { ChannelModule } from './channel/channel.module';
 import { ChannelEntity } from './channel/entities/channel.entity';
-import { AuthorizationModule } from './authorization/authorization.module';
-import { AuthorizationStrategy } from './authorization/authorization.strategy';
+import { AuthorizationModule } from './auth/auth.module';
+import { AuthorizationStrategy } from './auth/auth.strategy';
 import { ConfigModule } from '@nestjs/config';
-import { config } from 'process';
 import { MulterModule } from '@nestjs/platform-express';
 import { GameModule } from './game/game.module';
 import { GameEntity } from './game/entities/game.entity';
 import { BannedEntity } from './channel/entities/banned.entity';
 import { GameQueueEntity } from './game/entities/game.queue.entity';
 import { MessageEntity } from './channel/entities/message.entity';
+import { UserInfoMiddleware } from './auth/auth.middleware';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -44,7 +44,11 @@ import { MessageEntity } from './channel/entities/message.entity';
   controllers: [AppController],
   providers: [AppService, SocketGateway, AuthorizationStrategy],
 })
-export class AppModule {
+export class AppModule implements NestModule {
   constructor(private dataSource: DataSource) {
+  }
+
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(UserInfoMiddleware).forRoutes("*");
   }
 }

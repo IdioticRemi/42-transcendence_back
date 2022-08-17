@@ -1,11 +1,13 @@
-import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { UserTokenGuard } from 'src/auth/auth.guard';
 import { MResponse } from 'src/MResponse';
 import { ChannelService } from './channel.service';
 import { ChannelDto } from './dto/channel.dto';
 import { AddMessageEntityDto } from './dto/message.dto';
-import { ChannelEntity } from './entities/channel.entity';
 import { MessageEntity } from './entities/message.entity';
+import { Request } from 'express';
 
+@UseGuards(UserTokenGuard)
 @Controller('channels')
 export class ChannelController {
 	constructor(
@@ -13,7 +15,8 @@ export class ChannelController {
 	) {}
 	
 	@Get()
-	async getAllChannels() {
+	async getAllChannels(@Req() req: Request) {
+		console.debug(req);
 		return this.channelService.getAllChannels();
 	}
 

@@ -8,7 +8,7 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { AuthorizationService } from './authorization.service';
+import { AuthorizationService } from './auth.service';
 
 @Controller('auth')
 export class AuthorizationController {

@@ -10,8 +10,6 @@ import { defaultAvatar } from 'lib';
 import { ChannelEntity } from 'src/channel/entities/channel.entity';
 import { plainToClass } from 'class-transformer';
 
-
-
 @Injectable()
 export class UsersService {
 	constructor(

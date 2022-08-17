@@ -14,7 +14,7 @@ export class ChannelService {
 		@InjectRepository(ChannelEntity)
 		private channelRepository: Repository<ChannelEntity>,
 		@InjectRepository(MessageEntity)
-		private messageRepository: Repository<MessageEntity>
+		private messageRepository: Repository<MessageEntity>,
 	) {}
 
 	async getAllChannels() {
@@ -29,7 +29,7 @@ export class ChannelService {
 		): Promise<MResponse<ChannelDto>> {
 
 
-		// check if user exists ?
+		// check if user exists => TODO: Guard
 
 		// checks if channel already exists
 		const channel = await this.channelRepository.findOne({
@@ -96,8 +96,7 @@ export class ChannelService {
 				payload: plainToClass(ChannelDto, channel, {excludeExtraneousValues: true})
 			} as MResponse<ChannelDto>;
 		})
-		.catch( (e) => {
-			console.debug(e);
+		.catch( () => {
 			return {
 				status: 'error',
 				message: 'cannot delete this channel'
