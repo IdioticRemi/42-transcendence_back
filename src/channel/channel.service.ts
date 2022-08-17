@@ -4,13 +4,17 @@ import { plainToClass } from 'class-transformer';
 import { MResponse } from 'src/MResponse';
 import { Repository } from 'typeorm';
 import { ChannelDto } from './dto/channel.dto';
+import { AddMessageEntityDto } from './dto/message.dto';
 import { ChannelEntity } from './entities/channel.entity';
+import { MessageEntity } from './entities/message.entity';
 
 @Injectable()
 export class ChannelService {
 	constructor(
 		@InjectRepository(ChannelEntity)
 		private channelRepository: Repository<ChannelEntity>,
+		@InjectRepository(MessageEntity)
+		private messageRepository: Repository<MessageEntity>
 	) {}
 
 	async getAllChannels() {
@@ -98,6 +102,58 @@ export class ChannelService {
 				message: 'cannot delete this channel'
 			}
 		});
+	}
+
+	async getMessages(channelId: number): Promise<MResponse<MessageEntity[]>> {
+		
+		// check if channel exists and pull messages relation
+		const channel = await this.channelRepository.findOne({
+			where: {
+				id: channelId
+			},
+			relations: ['messages'],
+		});
+		if (!channel) {
+			return {
+				status: 'error',
+				message: 'this channel does not exist'
+			}
+		}
+
+		return {
+			status: 'success',
+			payload: channel.messages
+		}
+
+	}
+
+	async addMessage(channelId: number, message: AddMessageEntityDto): Promise<MResponse<MessageEntity>> {
+
+		// check if channel exists and pull messages relation
+		const channel = await this.channelRepository.findOne({
+			where: {
+				id: channelId
+			},
+			relations: ['messages']
+		})
+		if (!channel) {
+			return {
+				status: 'error',
+				message: 'this channel does not exist'
+			}
+		}
+		console.debug('adding message');
+
+		const newMessage = this.messageRepository.create(message)
+		console.debug(newMessage);
+		channel.messages.push(newMessage);
+		this.channelRepository.save(channel);
+
+		// TODO: returned messages not up to date
+		return {
+			status: 'success',
+			payload: newMessage
+		}
 	}
 
 }

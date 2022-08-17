@@ -45,7 +45,7 @@ export class ChannelEntity {
 	@ManyToMany( () => UserEntity )
 	admins: UserEntity[];
 
-	@OneToMany( () => MessageEntity, message => message.channel)
+	@OneToMany( () => MessageEntity, message => message.channel, {cascade: true})
 	messages: MessageEntity[];
 
 }
