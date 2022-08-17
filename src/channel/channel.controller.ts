@@ -16,7 +16,7 @@ export class ChannelController {
 	
 	@Get()
 	async getAllChannels(@Req() req: Request) {
-		console.debug(req);
+		console.debug(req.user);
 		return this.channelService.getAllChannels();
 	}
 

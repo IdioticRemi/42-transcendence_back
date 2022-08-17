@@ -11,7 +11,9 @@ import { extname, join } from 'path';
 import { maxUploadSize } from 'lib';
 import { ChannelEntity } from 'src/channel/entities/channel.entity';
 import { plainToClass } from 'class-transformer';
+import { UserTokenGuard } from 'src/auth/auth.guard';
 
+@UseGuards(UserTokenGuard)
 @Controller('users')
 export class UsersController {
 	constructor(
