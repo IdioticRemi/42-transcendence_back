@@ -13,18 +13,19 @@ import { ChannelEntity } from 'src/channel/entities/channel.entity';
 import { plainToClass } from 'class-transformer';
 import { UserTokenGuard } from 'src/auth/auth.guard';
 
-@UseGuards(UserTokenGuard)
 @Controller('users')
 export class UsersController {
 	constructor(
 		private usersService: UsersService
 	) {}
 
+	@UseGuards(UserTokenGuard)
 	@Get()
 	getAllUsers() : Promise<UserEntity[]> {
 		return this.usersService.getAllUsers();
 	}
 
+	@UseGuards(UserTokenGuard)
 	@Get(':id')
 	getUserById(
 		@Param('id', ParseIntPipe) id: number
@@ -32,22 +33,25 @@ export class UsersController {
 		return this.usersService.getUserById(id);
 	}
 	
-	@Post('register')
-	addUser(
-		@Body() newuserdto: AddUserDto
-		) : Promise<MResponse<SendUserDto>> {
-			return this.usersService.addUser(newuserdto);
-		}
+	// @UseGuards(UserTokenGuard)
+	// @Post('register')
+	// addUser(
+	// 	@Body() newuserdto: AddUserDto
+	// 	) : Promise<MResponse<SendUserDto>> {
+	// 		return this.usersService.addUser(newuserdto);
+	// 	}
 		
-	@Delete(':id')
-	softRemoveUser(
-		@Param('id', ParseIntPipe) id: number
-		) {
-			return this.usersService.softRemoveUser(id);
-		}
+	// @UseGuards(UserTokenGuard)
+	// @Delete(':id')
+	// softRemoveUser(
+	// 	@Param('id', ParseIntPipe) id: number
+	// 	) {
+	// 		return this.usersService.softRemoveUser(id);
+	// 	}
 		
 	// the interceptor work on the 'file' field of the request
 	// returns 415 error if file type is wrong and 413 if file too large
+	@UseGuards(UserTokenGuard)
 	@Post('avatar/:user')
 	@UseInterceptors(FileInterceptor('file', {
 		storage: diskStorage({
@@ -98,6 +102,7 @@ export class UsersController {
 	// }
 
 	//TODO : test with postman
+	@UseGuards(UserTokenGuard)
 	@Get(':userid/channels')
 	async GetSubscribedChannels(
 		@Param('userid', ParseIntPipe) userid: number
@@ -106,6 +111,7 @@ export class UsersController {
 	}
 
 	//TODO : test with postman
+	@UseGuards(UserTokenGuard)
 	@Get(':userid/friends')
 	async GetFriends(
 		@Param('userid', ParseIntPipe) userid: number
@@ -113,6 +119,7 @@ export class UsersController {
 		return this.usersService.getFriends(userid);
 	}
 
+	@UseGuards(UserTokenGuard)
 	@Post(':userid/friends')
 	async AddFriend(
 		@Param('userid', ParseIntPipe) userId: number,
@@ -121,6 +128,7 @@ export class UsersController {
 		return this.usersService.addFriend(userId, parseInt(friendId));
 	}
 
+	@UseGuards(UserTokenGuard)
 	@Delete(':userid/friends')
 	async deleteFriend(
 		@Param('userid', ParseIntPipe) userId: number,
@@ -130,6 +138,7 @@ export class UsersController {
 	}
 
 	//TODO : test with postman
+	@UseGuards(UserTokenGuard)
 	@Get(':userid/blocked')
 	async GetBlocked(
 		@Param('userid', ParseIntPipe) userid: number

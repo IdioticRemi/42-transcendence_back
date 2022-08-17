@@ -22,12 +22,12 @@ export class ChannelController {
 
 	@Post()
 	async createChannel(
-		@Body('userId', ParseIntPipe) userId: number,
+		@Req() req: Request,
 		@Body('channelName') channelName: string,
 		@Body('password') password: string = "",
-		@Body('isPrivate', ParseBoolPipe) isPrivate: boolean, 
+		@Body('isPrivate', ParseBoolPipe) isPrivate: boolean = false, 
 	): Promise<MResponse<ChannelDto>> {
-		return await this.channelService.createChannel(userId, channelName, password, isPrivate);
+		return await this.channelService.createChannel(req.user.id, channelName, password, isPrivate);
 	}
 
 	@Delete()

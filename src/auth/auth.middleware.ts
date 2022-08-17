@@ -9,7 +9,7 @@ export class UserInfoMiddleware implements NestMiddleware {
 		private userService: UsersService
 	) {}
 
-  async use(req: Request, res: Response, next: NextFunction) {
+  async use(req: Request, _: Response, next: NextFunction) {
     const auth_header = req.headers.authorization;
 	if (!auth_header || !auth_header.startsWith("Bearer ") || auth_header.split(" ").length != 2) {
 		next();
