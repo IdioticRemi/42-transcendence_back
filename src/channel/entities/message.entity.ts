@@ -7,7 +7,7 @@ export class MessageEntity {
 	@PrimaryGeneratedColumn()
 	id: number;
 
-	@ManyToOne( () => ChannelEntity, channel => channel.messages)
+	@ManyToOne( () => ChannelEntity, channel => channel.messages, {onDelete: 'CASCADE'})
 	channel: ChannelEntity;
 
 	@Column()

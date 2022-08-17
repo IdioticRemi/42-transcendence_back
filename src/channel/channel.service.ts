@@ -96,7 +96,8 @@ export class ChannelService {
 				payload: plainToClass(ChannelDto, channel, {excludeExtraneousValues: true})
 			} as MResponse<ChannelDto>;
 		})
-		.catch( () => {
+		.catch( (e) => {
+			console.debug(e);
 			return {
 				status: 'error',
 				message: 'cannot delete this channel'
