@@ -36,6 +36,7 @@ export class ChannelEntity {
 	@ManyToMany( () => BannedEntity )
 	banned: BannedEntity[]
 
+	// TODO: cascade ?
 	@JoinColumn()
 	@ManyToMany( () => UserEntity, (user) => user.channels)
 	users: UserEntity[];

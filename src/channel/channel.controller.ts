@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, Post } from '@nestjs/common';
 import { MResponse } from 'src/MResponse';
 import { ChannelService } from './channel.service';
 import { ChannelDto } from './dto/channel.dto';
@@ -23,6 +23,13 @@ export class ChannelController {
 		@Body('isPrivate', ParseBoolPipe) isPrivate: boolean, 
 	): Promise<MResponse<ChannelDto>> {
 		return await this.channelService.createChannel(userId, channelName, password, isPrivate);
+	}
+
+	@Delete()
+	async deleteChannel(
+		@Body('channelId', ParseIntPipe) channelId: number
+	): Promise<MResponse<ChannelDto>> {
+		return await this.channelService.deleteChannel(channelId);
 	}
 
 

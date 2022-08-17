@@ -24,6 +24,9 @@ export class ChannelService {
 		isPrivate: boolean
 		): Promise<MResponse<ChannelDto>> {
 
+
+		// check if user exists ?
+
 		// checks if channel already exists
 		const channel = await this.channelRepository.findOne({
 			where: {
@@ -62,6 +65,39 @@ export class ChannelService {
 						message: 'impossible to register this channel',
 					};
 				});
+	}
+
+	async deleteChannel(channelId: number): Promise<MResponse<ChannelDto>> {
+
+		//check if channel exists
+		const channel = await this.channelRepository.findOne({
+			where: {
+				id: channelId
+			}
+		});
+		if (!channel) {
+			return {
+				status: "error",
+				message: "this channel does not exist"
+			}
+		}
+
+		// delete in DB
+		return this.channelRepository.delete({
+			id: channel.id
+		})
+		.then( () => {
+			return {
+				status: 'success',
+				payload: plainToClass(ChannelDto, channel, {excludeExtraneousValues: true})
+			} as MResponse<ChannelDto>;
+		})
+		.catch( () => {
+			return {
+				status: 'error',
+				message: 'cannot delete this channel'
+			}
+		});
 	}
 
 }
