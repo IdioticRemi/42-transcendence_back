@@ -14,9 +14,13 @@ export class ChannelEntity {
 	})
 	name: string;
 
-	// @JoinColumn()
-	@ManyToOne( () => UserEntity )
-	owner: UserEntity;
+	// // @JoinColumn()
+	// @ManyToOne( () => UserEntity )
+	// owner: UserEntity;
+
+	// TODO: A voir avec Remi
+	@Column()
+	owner: number;
 
 	@Column({
 		default: false
