@@ -105,7 +105,7 @@ export class UsersController {
 	@Get(':userid/channels')
 	async GetSubscribedChannels(
 		@Param('userid', ParseIntPipe) userid: number
-	): Promise<ChannelEntity[]> {
+	): Promise<MResponse<ChannelEntity[]>> {
 		return this.usersService.getSubscribedChannels(userid);
 	}
 
@@ -113,7 +113,7 @@ export class UsersController {
 	@Get(':userid/friends')
 	async GetFriends(
 		@Param('userid', ParseIntPipe) userid: number
-	): Promise<SendUserDto[]> {
+	): Promise<MResponse<SendUserDto[]>> {
 		return this.usersService.getFriends(userid);
 	}
 
@@ -139,7 +139,7 @@ export class UsersController {
 	@Get(':userid/blocked')
 	async GetBlocked(
 		@Param('userid', ParseIntPipe) userid: number
-	): Promise<SendUserDto[]> {
+	): Promise<MResponse<SendUserDto[]>> {
 		return this.usersService.getBlocked(userid);
 	}
 

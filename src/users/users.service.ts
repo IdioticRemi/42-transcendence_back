@@ -1,6 +1,6 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MResponse } from 'lib/MResponse';
+import { failureMResponse, MResponse, successMResponse } from 'lib/MResponse';
 import { Repository } from 'typeorm';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.entity';
@@ -46,22 +46,23 @@ export class UsersService {
 	async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
 		return this.usersRepository.save(newUser)
 			.then((user) => {
-				return {
-					status: 'success',
-					payload: plainToClass(SendUserDto, user, {excludeExtraneousValues: true}),
-				} as MResponse<SendUserDto>;
+				return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
 			}).catch(() => {
-				// throw new HttpException(`Username already registered`, 400);
-				return {
-					status: 'error',
-					message: `Username already registered`,
-				};
+				return failureMResponse("Username already registered");
 		});
 	}
 
-	async softRemoveUser(id: number): Promise<UserEntity> {
-		const toRemove : UserEntity = await this.findById(id);
-		return this.usersRepository.softRemove(toRemove);
+	async softRemoveUser(id: number): Promise<MResponse<SendUserDto>> {
+		const toRemove = await this.findById(id);
+		if (!toRemove)
+			return failureMResponse("this user does not exist")
+		return await this.usersRepository.softRemove(toRemove)
+						.then( () => {
+							return successMResponse(plainToClass(SendUserDto, toRemove, {excludeExtraneousValues: true}));
+						})
+						.catch( () => {
+							return failureMResponse("failed to remove user in database");
+						});
 	}
 
 	async getUserByUsername(user: string): Promise<UserEntity> {
@@ -91,28 +92,28 @@ export class UsersService {
 			}
 		}
 		// register new avatar's path in DB
-		await this.usersRepository.update({username: user}, {img_path: path})
+		await this.usersRepository.update({username: user}, {img_path: path}).catch((e) => {console.debug(e)} );
 	}
 
-	async getFriends(userid: number): Promise<SendUserDto[]> {
+	async getFriends(userid: number): Promise<MResponse<SendUserDto[]>> {
 		const user = await this.usersRepository.findOne({
 			where: {id: userid},
 			relations: ['friends']
 		});
 		if (!user)
-			return [];
+			return failureMResponse("this user does not exist");
 
-		return user.friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true}));
+		return successMResponse(user.friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true})));
 	}
 	
-	async getSubscribedChannels(userid: number): Promise<ChannelEntity[]> {
+	async getSubscribedChannels(userid: number): Promise<MResponse<ChannelEntity[]>> {
 		const user = await this.usersRepository.findOne({
 			where: {id: userid},
 			relations: ['channels']
 		});
 		if (!user)
-		return [];
-		return user.channels;
+			return failureMResponse("this user does not exist");
+		return successMResponse(user.channels);
 	}
 	
 	async addFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
@@ -127,18 +128,12 @@ export class UsersService {
 		}
 		//check if already friends
 		if (user.friends.find((f) => friend.id === f.id)) {
-			return {
-				"status": "error",
-				"message": "target is already the user's friend",
-			}
+			return failureMResponse("target is already the user's friend");
 		}
 		
 		// check if friend has blocked the user
 		if (friend.blocked.find((f) => user.id === f.id)) {
-			return {
-				"status": "error",
-				"message": "user is blocked by target",
-			}
+			return failureMResponse("user is blocked by target");
 		}
 		// save copies
 		const user_cpy = Object.assign({}, user) as UserEntity;
@@ -154,15 +149,10 @@ export class UsersService {
 		user.friends.push(friend_cpy);
 		friend.friends.push(user_cpy);
 		
-		await this.usersRepository.save(user);
-		await this.usersRepository.save(friend);
+		await this.usersRepository.save(user).catch( () => { return failureMResponse("unable to register change in the database")});
+		await this.usersRepository.save(friend).catch( () => { return failureMResponse("unable to register change in the database")});
 		
-		delete user.token;
-		
-		return {
-			"status": "success",
-			"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true})
-		}
+		return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
 	}
 	
 	async deleteFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
@@ -171,44 +161,34 @@ export class UsersService {
 		
 		// check if user and friend are in the database
 		if (!user || !friend) {
-			return {
-				"status": "error",
-				"message": "target or user does not exist",
-			}
+			return failureMResponse("target or user does not exist");
 		}
 		
 		const target = user.friends.find((f) => friend.id === f.id);
 		//check if really friends
 		if (!target) {
-			return {
-				"status": "error",
-				"message": "target is not the user's friend",
-			}
+			return failureMResponse("target is not the user's friend");
 		}
 		
 		// user side friend removal
 		user.friends = user.friends.filter(f => f.id != friend.id);
-		await this.usersRepository.save(user);
+		await this.usersRepository.save(user).catch( () => { return failureMResponse("unable to register change in the database")});
 		
 		// friend side friend removal
 		friend.friends = friend.friends.filter(f => f.id != user.id);
-		await this.usersRepository.save(friend);
+		await this.usersRepository.save(friend).catch( () => { return failureMResponse("unable to register change in the database")});
 		
-		
-		return {
-			"status": "success",
-			"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true}),
-		}
+		return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
 	}
 
-	async getBlocked(userid: number): Promise<SendUserDto[]> {
+	async getBlocked(userid: number): Promise<MResponse<SendUserDto[]>> {
 		const user = await this.usersRepository.findOne({
 			where: {id: userid},
 			relations: ['blocked']
 		});
 		if (!user)
-			return [];
-		return user.blocked.map((b) => plainToClass(SendUserDto, b, {excludeExtraneousValues: true}));
+			return failureMResponse("this user does not exist");
+		return successMResponse(user.blocked.map((b) => plainToClass(SendUserDto, b, {excludeExtraneousValues: true})));
 	}
 
 	async addBlocked(userId: number, blockedId: number): Promise<MResponse<SendUserDto>> {
@@ -216,17 +196,11 @@ export class UsersService {
 		const toBlock = await this.getUserById(blockedId);
 		
 		if (!user || !toBlock) {
-			return {
-				"status": "error",
-				"message": "target or user does not exist",
-			}
+			return failureMResponse("target or user does not exist");
 		}
 		//check if already blocked
 		if (user.blocked.find((b) => toBlock.id === b.id)) {
-			return {
-				"status": "error",
-				"message": "target is already blocked by user",
-			}
+			return failureMResponse("target is already blocked by user");
 		}
 		
 		// check if user is friend with the target and remove friendship if necessary 
@@ -238,60 +212,39 @@ export class UsersService {
 		
 		// save to database
 		user.blocked.push(toBlock);
-
 		
 		return await this.usersRepository.save(user)
 			.then(() => {
-				return {
-					"status": "success",
-					"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true})
-				} as MResponse<SendUserDto>;
+				return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
 			})
 			.catch( () => {
-				return {
-					"status": "error",
-					"message": "cannot register change in the database"
-				}
+				return failureMResponse("cannot register change in the database");
 			});
 	}
-
 		
 	async deleteBlocked(userId: number, blockedId: number): Promise<MResponse<SendUserDto>> {
 		
 		// check if user is in the database and retrieve blocked relation
 		const user = await this.getUserById(userId, ['blocked']);
 		if (!user) {
-			return {
-				"status": "error",
-				"message": "user does not exist",
-			}
+			return failureMResponse("this user does not exist");
 		}
 		
 		//check if really blocked
 		const target = user.blocked.find((b) => blockedId === b.id);
 		if (!target) {
-			return {
-				"status": "error",
-				"message": "target is not blocked by the user",
-			}
+			return failureMResponse("target is not blocked by the user");
 		}
 		
 		// remove block and register change in database
 		user.blocked = user.blocked.filter(b => b.id != target.id);
 		return this.usersRepository.save(user)
 			.then( () => {
-				return {
-					"status": "success",
-					"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true}),
-				} as MResponse<SendUserDto>;
+				return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
 			}) 
 			.catch( () => {
-				return {
-					"status": "error",
-					"message": "cannot register change in the database"
-				};
+				return failureMResponse("cannot register change in the database");
 			});
-		
 	}
 	
 }
