@@ -15,9 +15,8 @@ export class ChannelController {
 	) {}
 	
 	@Get()
-	async getAllChannels(@Req() req: Request) {
-		console.debug(req.user);
-		return this.channelService.getAllChannels();
+	async getAllChannels(): Promise<MResponse<ChannelDto[]>> {
+		return await this.channelService.getAllChannels();
 	}
 
 	@Post()

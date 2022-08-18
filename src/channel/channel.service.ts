@@ -17,8 +17,14 @@ export class ChannelService {
 		private messageRepository: Repository<MessageEntity>,
 	) {}
 
-	async getAllChannels() {
-		return await this.channelRepository.find();
+	async getAllChannels(): Promise<MResponse<ChannelDto[]>> {
+		return await this.channelRepository.find()
+						.then((channels) => {
+							return successMResponse(channels.map( (c) => plainToClass(ChannelDto, c, {excludeExtraneousValues: true})));
+						})
+						.catch( () => {
+							return failureMResponse("database failure");
+						})
 	}
 
 	async createChannel(
