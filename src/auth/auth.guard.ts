@@ -1,4 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext, HttpException } from '@nestjs/common';
+import { Socket } from 'socket.io';
 import { Request } from 'express';
 import fetch from "node-fetch";
 

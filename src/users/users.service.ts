@@ -27,30 +27,8 @@ export class UsersService {
 			relations: relations
 		});
 		if (userResult === undefined)
-			throw new NotFoundException(`the user of id=${id} does not exist`);
+			throw new NotFoundException(`user does not exist`);
 		return userResult;
-	}
-
-	async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
-		return this.usersRepository.save(newUser)
-			.then((user) => {
-				return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
-			}).catch(() => {
-				return failureMResponse("Username already registered");
-		});
-	}
-
-	async softRemoveUser(id: number): Promise<MResponse<SendUserDto>> {
-		const toRemove = await this.getUserById(id);
-		if (!toRemove)
-			return failureMResponse("this user does not exist")
-		return await this.usersRepository.softRemove(toRemove)
-						.then( () => {
-							return successMResponse(plainToClass(SendUserDto, toRemove, {excludeExtraneousValues: true}));
-						})
-						.catch( () => {
-							return failureMResponse("failed to remove user in database");
-						});
 	}
 
 	async getUserByUsername(user: string): Promise<UserEntity> {
@@ -59,8 +37,40 @@ export class UsersService {
 			{"username": user},
 		});
 		if (!userResult)
-			throw new NotFoundException(`${user} is not registered`);
+			throw new NotFoundException(`user does not exist`);
 		return userResult;
+	}
+
+	async getUserByToken(token: string, relations: string[] = []): Promise<UserEntity> {
+		const userResult = await this.usersRepository.findOne({
+			where: { token },
+			relations,
+		});
+		if (!userResult)
+			throw new NotFoundException(`user does not exist`);
+		return userResult;
+	}
+
+	async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
+		return this.usersRepository.save(newUser)
+			.then((user) => {
+				return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
+			}).catch(() => {
+				return failureMResponse("username already registered");
+		});
+	}
+
+	async softRemoveUser(id: number): Promise<MResponse<SendUserDto>> {
+		const toRemove = await this.getUserById(id);
+		if (!toRemove)
+			return failureMResponse("user does not exist")
+		return await this.usersRepository.softRemove(toRemove)
+						.then( () => {
+							return successMResponse(plainToClass(SendUserDto, toRemove, {excludeExtraneousValues: true}));
+						})
+						.catch( () => {
+							return failureMResponse("failed to remove user in database");
+						});
 	}
 
 	async updateAvatar(user: string, path: string) {
@@ -89,7 +99,7 @@ export class UsersService {
 			relations: ['friends']
 		});
 		if (!user)
-			return failureMResponse("this user does not exist");
+			return failureMResponse("user does not exist");
 
 		return successMResponse(user.friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true})));
 	}
@@ -100,7 +110,7 @@ export class UsersService {
 			relations: ['channels']
 		});
 		if (!user)
-			return failureMResponse("this user does not exist");
+			return failureMResponse("user does not exist");
 		return successMResponse(user.channels);
 	}
 	

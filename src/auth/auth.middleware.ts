@@ -27,15 +27,12 @@ export class UserInfoMiddleware implements NestMiddleware {
 		next();
 		return;
 	}
-	
+
 	const body = await res_intra.json();
 
 	try {
 		req.user = await this.userService.getUserById(body.resource_owner_id);
-		console.warn(req.user);
-	} catch (e) {
-		console.error(e);
-	}
+	} catch (e) {}
 	
     next();
   }

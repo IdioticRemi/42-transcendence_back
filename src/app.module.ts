@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { SocketGateway } from './socket.gateway';
+import { SocketGateway } from './socket/socket.gateway';
 import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 import { ChannelModule } from './channel/channel.module';
@@ -18,6 +18,8 @@ import { BannedEntity } from './channel/entities/banned.entity';
 import { GameQueueEntity } from './game/entities/game.queue.entity';
 import { MessageEntity } from './channel/entities/message.entity';
 import { UserInfoMiddleware } from './auth/auth.middleware';
+import { SocketService } from './socket/socket.service';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -38,10 +40,11 @@ import { UserInfoMiddleware } from './auth/auth.middleware';
     MulterModule.register({
       dest: './uploads',
     }),
-    GameModule
+    GameModule,
+    SocketModule
   ],
   controllers: [AppController],
-  providers: [AppService, SocketGateway, AuthorizationStrategy],
+  providers: [AppService, SocketGateway, AuthorizationStrategy, SocketService],
 })
 export class AppModule implements NestModule {
   constructor(private dataSource: DataSource) {

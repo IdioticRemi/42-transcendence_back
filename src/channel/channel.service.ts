@@ -28,6 +28,15 @@ export class ChannelService {
 						})
 	}
 
+	async getChannelById(channelId: number, relations: string[] = []): Promise<ChannelDto | undefined> {
+		return this.channelRepository.findOne({
+			where: {
+				id: channelId,
+			},
+			relations
+		});
+	}
+
 	async createChannel(
 		userId: number,
 		channelName: string,
