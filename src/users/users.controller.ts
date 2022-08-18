@@ -101,7 +101,6 @@ export class UsersController {
 	// 	file.pipe(res);
 	// }
 
-	//TODO : test with postman
 	@UseGuards(UserTokenGuard)
 	@Get(':userid/channels')
 	async GetSubscribedChannels(
@@ -110,7 +109,6 @@ export class UsersController {
 		return this.usersService.getSubscribedChannels(userid);
 	}
 
-	//TODO : test with postman
 	@UseGuards(UserTokenGuard)
 	@Get(':userid/friends')
 	async GetFriends(
@@ -137,13 +135,30 @@ export class UsersController {
 		return this.usersService.deleteFriend(userId, parseInt(friendId));
 	}
 
-	//TODO : test with postman
 	@UseGuards(UserTokenGuard)
 	@Get(':userid/blocked')
 	async GetBlocked(
 		@Param('userid', ParseIntPipe) userid: number
 	): Promise<SendUserDto[]> {
-		return (await this.usersService.getBlocked(userid)).map(b => plainToClass(SendUserDto, b, {excludeExtraneousValues: true}));
+		return this.usersService.getBlocked(userid);
+	}
+
+	@UseGuards(UserTokenGuard)
+	@Post(':userid/blocked')
+	async AddBlocked(
+		@Param('userid', ParseIntPipe) userId: number,
+		@Body('blockedId') blockedId: string
+	) : Promise<MResponse<SendUserDto>> {
+		return this.usersService.addBlocked(userId, parseInt(blockedId));
+	}
+
+	@UseGuards(UserTokenGuard)
+	@Delete(':userid/blocked')
+	async deleteBlocked(
+		@Param('userid', ParseIntPipe) userId: number,
+		@Body('blockedId') blockedId: string
+	) : Promise<MResponse<SendUserDto>> {
+		return this.usersService.deleteBlocked(userId, parseInt(blockedId));
 	}
 
 }

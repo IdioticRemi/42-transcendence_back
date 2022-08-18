@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { MResponse } from 'src/MResponse';
 import { Repository } from 'typeorm';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
-import { BlockedEntity } from './entities/blocked.entity';
 import { UserEntity } from './entities/user.entity';
 import * as fs from 'fs';
 import { defaultAvatar } from 'lib';
@@ -15,8 +14,7 @@ export class UsersService {
 	constructor(
 		@InjectRepository(UserEntity)
 		private usersRepository: Repository<UserEntity>,
-		@InjectRepository(BlockedEntity)
-		private blockedRepository: Repository<BlockedEntity>
+
 	) {}
 	
 	async getAllUsers(): Promise<UserEntity[]> {
@@ -106,31 +104,21 @@ export class UsersService {
 
 		return user.friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true}));
 	}
-
-	async getBlocked(userid: number): Promise<UserEntity[]> {
-		const user = await this.usersRepository.findOne({
-			where: {id: userid},
-			relations: ['blocked']
-		});
-		if (!user)
-			return [];
-		return user.blocked;
-	}
-
+	
 	async getSubscribedChannels(userid: number): Promise<ChannelEntity[]> {
 		const user = await this.usersRepository.findOne({
 			where: {id: userid},
 			relations: ['channels']
 		});
 		if (!user)
-			return [];
+		return [];
 		return user.channels;
 	}
-
+	
 	async addFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
 		const user = await this.getUserById(userId, ['friends', 'blocked']);
 		const friend = await this.getUserById(friendId, ['friends', 'blocked']);
-
+		
 		if (!user || !friend) {
 			return {
 				"status": "error",
@@ -144,7 +132,7 @@ export class UsersService {
 				"message": "target is already the user's friend",
 			}
 		}
-
+		
 		// check if friend has blocked the user
 		if (friend.blocked.find((f) => user.id === f.id)) {
 			return {
@@ -155,32 +143,32 @@ export class UsersService {
 		// save copies
 		const user_cpy = Object.assign({}, user) as UserEntity;
 		const friend_cpy = Object.assign({}, friend) as UserEntity;
-
+		
 		// remove circular references
 		delete user_cpy.friends;
 		delete friend_cpy.friends;
 		delete user_cpy.blocked;
 		delete friend_cpy.blocked;
-
+		
 		// save to database
 		user.friends.push(friend_cpy);
 		friend.friends.push(user_cpy);
-
+		
 		await this.usersRepository.save(user);
 		await this.usersRepository.save(friend);
-
+		
 		delete user.token;
-
+		
 		return {
 			"status": "success",
 			"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true})
 		}
 	}
-
+	
 	async deleteFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
 		const user = await this.getUserById(userId, ['friends']);
 		const friend = await this.getUserById(friendId, ['friends']);
-
+		
 		// check if user and friend are in the database
 		if (!user || !friend) {
 			return {
@@ -188,7 +176,7 @@ export class UsersService {
 				"message": "target or user does not exist",
 			}
 		}
-
+		
 		const target = user.friends.find((f) => friend.id === f.id);
 		//check if really friends
 		if (!target) {
@@ -197,15 +185,15 @@ export class UsersService {
 				"message": "target is not the user's friend",
 			}
 		}
-
+		
 		// user side friend removal
 		user.friends = user.friends.filter(f => f.id != friend.id);
 		await this.usersRepository.save(user);
-
+		
 		// friend side friend removal
 		friend.friends = friend.friends.filter(f => f.id != user.id);
 		await this.usersRepository.save(friend);
-
+		
 		
 		return {
 			"status": "success",
@@ -213,4 +201,97 @@ export class UsersService {
 		}
 	}
 
+	async getBlocked(userid: number): Promise<SendUserDto[]> {
+		const user = await this.usersRepository.findOne({
+			where: {id: userid},
+			relations: ['blocked']
+		});
+		if (!user)
+			return [];
+		return user.blocked.map((b) => plainToClass(SendUserDto, b, {excludeExtraneousValues: true}));
+	}
+
+	async addBlocked(userId: number, blockedId: number): Promise<MResponse<SendUserDto>> {
+		const user = await this.getUserById(userId, ['friends', 'blocked']);
+		const toBlock = await this.getUserById(blockedId);
+		
+		if (!user || !toBlock) {
+			return {
+				"status": "error",
+				"message": "target or user does not exist",
+			}
+		}
+		//check if already blocked
+		if (user.blocked.find((b) => toBlock.id === b.id)) {
+			return {
+				"status": "error",
+				"message": "target is already blocked by user",
+			}
+		}
+		
+		// check if user is friend with the target and remove friendship if necessary 
+		if (user.friends.find((f) => toBlock.id === f.id)) {
+			console.debug("removing friendship");
+			await this.deleteFriend(user.id, toBlock.id);
+			delete user.friends;
+		}
+		
+		// save to database
+		user.blocked.push(toBlock);
+
+		
+		return await this.usersRepository.save(user)
+			.then(() => {
+				return {
+					"status": "success",
+					"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true})
+				} as MResponse<SendUserDto>;
+			})
+			.catch( () => {
+				return {
+					"status": "error",
+					"message": "cannot register change in the database"
+				}
+			});
+	}
+
+		
+	async deleteBlocked(userId: number, blockedId: number): Promise<MResponse<SendUserDto>> {
+		
+		// check if user is in the database and retrieve blocked relation
+		const user = await this.getUserById(userId, ['blocked']);
+		if (!user) {
+			return {
+				"status": "error",
+				"message": "user does not exist",
+			}
+		}
+		
+		//check if really blocked
+		const target = user.blocked.find((b) => blockedId === b.id);
+		if (!target) {
+			return {
+				"status": "error",
+				"message": "target is not blocked by the user",
+			}
+		}
+		
+		// remove block and register change in database
+		user.blocked = user.blocked.filter(b => b.id != target.id);
+		return this.usersRepository.save(user)
+			.then( () => {
+				return {
+					"status": "success",
+					"payload": plainToClass(SendUserDto, user, {excludeExtraneousValues: true}),
+				} as MResponse<SendUserDto>;
+			}) 
+			.catch( () => {
+				return {
+					"status": "error",
+					"message": "cannot register change in the database"
+				};
+			});
+		
+	}
+	
 }

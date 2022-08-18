@@ -4,7 +4,6 @@ import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SocketGateway } from './socket.gateway';
-import { BlockedEntity } from './users/entities/blocked.entity';
 import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
 import { ChannelModule } from './channel/channel.module';
@@ -29,7 +28,7 @@ import { UserInfoMiddleware } from './auth/auth.middleware';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [UserEntity, BlockedEntity, ChannelEntity, GameEntity, BannedEntity, GameQueueEntity, MessageEntity],
+      entities: [UserEntity, ChannelEntity, GameEntity, BannedEntity, GameQueueEntity, MessageEntity],
       // synchronize: true => dev only
       synchronize: true,
     }),
