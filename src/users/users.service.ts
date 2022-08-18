@@ -21,26 +21,14 @@ export class UsersService {
 		return this.usersRepository.find();
 	}
 
-	async findById(id: number): Promise<UserEntity> {
-		const toFind : UserEntity = await this.usersRepository.findOne({
-			where: {
-			"id": id
-			}
-		});
-		if (toFind === undefined)
-			throw new NotFoundException(`the id:${id} does not exist`);
-		return toFind;
-	}
-
 	async getUserById(id: number, relations: string[] = []): Promise<UserEntity> {
-		const userResult = await this.usersRepository.find({
-			where: 
-			{"id": id},
+		const userResult = await this.usersRepository.findOne({
+			where: {"id": id},
 			relations: relations
 		});
 		if (userResult === undefined)
 			throw new NotFoundException(`the user of id=${id} does not exist`);
-		return userResult[0];
+		return userResult;
 	}
 
 	async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
@@ -53,7 +41,7 @@ export class UsersService {
 	}
 
 	async softRemoveUser(id: number): Promise<MResponse<SendUserDto>> {
-		const toRemove = await this.findById(id);
+		const toRemove = await this.getUserById(id);
 		if (!toRemove)
 			return failureMResponse("this user does not exist")
 		return await this.usersRepository.softRemove(toRemove)
@@ -115,7 +103,6 @@ export class UsersService {
 			return failureMResponse("this user does not exist");
 		return successMResponse(user.channels);
 	}
-	
 	
 	async addFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
 		const user = await this.getUserById(userId, ['friends', 'blocked']);

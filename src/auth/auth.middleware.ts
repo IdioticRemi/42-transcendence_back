@@ -22,16 +22,20 @@ export class UserInfoMiddleware implements NestMiddleware {
 	const res_intra = await fetch("https://api.intra.42.fr/oauth/token/info", {
 		headers: { Authorization: auth_header }
 	});
-	const body = await res_intra.json();
 
 	if (!res_intra.ok) {
 		next();
 		return;
 	}
+	
+	const body = await res_intra.json();
 
 	try {
-		req.user = await this.userService.getUserById(body.ressource_owner_id);
-	} catch {}
+		req.user = await this.userService.getUserById(body.resource_owner_id);
+		console.warn(req.user);
+	} catch (e) {
+		console.error(e);
+	}
 	
     next();
   }

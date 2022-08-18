@@ -7,6 +7,7 @@ import { ChannelDto } from './dto/channel.dto';
 import { AddMessageEntityDto } from './dto/message.dto';
 import { ChannelEntity } from './entities/channel.entity';
 import { MessageEntity } from './entities/message.entity';
+import { Request } from 'express';
 
 @Injectable()
 export class ChannelService {
@@ -62,17 +63,23 @@ export class ChannelService {
 				});
 	}
 
-	async deleteChannel(channelId: number): Promise<MResponse<ChannelDto>> {
+	async deleteChannel(req: Request, channelId: number): Promise<MResponse<ChannelDto>> {
 
 		//check if channel exists
 		const channel = await this.channelRepository.findOne({
 			where: {
 				id: channelId
-			}
+			},
+			relations: ['admins']
 		});
 		if (!channel) {
 			return failureMResponse("this channel does not exist");
 		}
+
+		// check if user is owner or channel admin
+		if (channel.ownerId != req.user.id && !channel.admins.find((admin) => req.user.id === admin.id))
+			return failureMResponse("user is not operator on this channel")
+
 
 		// delete in DB
 		return this.channelRepository.delete({

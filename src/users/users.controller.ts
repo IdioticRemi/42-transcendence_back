@@ -12,6 +12,7 @@ import { maxUploadSize } from 'lib';
 import { ChannelEntity } from 'src/channel/entities/channel.entity';
 import { plainToClass } from 'class-transformer';
 import { UserTokenGuard } from 'src/auth/auth.guard';
+import { successMResponse } from 'lib/MResponse';
 
 @Controller('users')
 export class UsersController {
@@ -27,10 +28,10 @@ export class UsersController {
 
 	@UseGuards(UserTokenGuard)
 	@Get(':id')
-	getUserById(
+	async getUserById(
 		@Param('id', ParseIntPipe) id: number
-	) : Promise<UserEntity> {
-		return this.usersService.getUserById(id);
+	) : Promise<MResponse<SendUserDto>> {
+		return successMResponse(plainToClass(SendUserDto, await this.usersService.getUserById(id), {excludeExtraneousValues: true}));
 	}
 	
 	// @UseGuards(UserTokenGuard)

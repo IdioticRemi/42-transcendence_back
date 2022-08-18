@@ -26,14 +26,16 @@ export class ChannelController {
 		@Body('password') password: string = "",
 		@Body('isPrivate', ParseBoolPipe) isPrivate: boolean = false, 
 	): Promise<MResponse<ChannelDto>> {
+		console.debug(req.user);
 		return await this.channelService.createChannel(req.user.id, channelName, password, isPrivate);
 	}
 
 	@Delete()
 	async deleteChannel(
+		@Req() req: Request,
 		@Body('channelId', ParseIntPipe) channelId: number
 	): Promise<MResponse<ChannelDto>> {
-		return await this.channelService.deleteChannel(channelId);
+		return await this.channelService.deleteChannel(req, channelId);
 	}
 
 	@Get(':id/messages')
