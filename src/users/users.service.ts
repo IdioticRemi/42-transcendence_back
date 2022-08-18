@@ -1,6 +1,6 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MResponse } from 'src/MResponse';
+import { MResponse } from 'lib/MResponse';
 import { Repository } from 'typeorm';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.entity';

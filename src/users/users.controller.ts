@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Res, StreamableFile, UnsupportedMediaTypeException, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { MResponse } from 'src/MResponse';
+import { MResponse } from 'lib/MResponse';
 import { AddUserDto, SendUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';

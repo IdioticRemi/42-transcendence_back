@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { UserTokenGuard } from 'src/auth/auth.guard';
-import { MResponse } from 'src/MResponse';
+import { MResponse } from 'lib/MResponse';
 import { ChannelService } from './channel.service';
 import { ChannelDto } from './dto/channel.dto';
 import { AddMessageEntityDto } from './dto/message.dto';
