@@ -116,15 +116,13 @@ export class UsersService {
 		return successMResponse(user.channels);
 	}
 	
+	
 	async addFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {
 		const user = await this.getUserById(userId, ['friends', 'blocked']);
 		const friend = await this.getUserById(friendId, ['friends', 'blocked']);
 		
 		if (!user || !friend) {
-			return {
-				"status": "error",
-				"message": "target or user does not exist",
-			}
+			return failureMResponse("target or user does not exist")
 		}
 		//check if already friends
 		if (user.friends.find((f) => friend.id === f.id)) {

@@ -121,18 +121,18 @@ export class UsersController {
 	@Post(':userid/friends')
 	async AddFriend(
 		@Param('userid', ParseIntPipe) userId: number,
-		@Body('friendId') friendId: string
+		@Body('friendId', ParseIntPipe) friendId: number
 	) : Promise<MResponse<SendUserDto>> {
-		return this.usersService.addFriend(userId, parseInt(friendId));
+		return this.usersService.addFriend(userId, friendId);
 	}
 
 	@UseGuards(UserTokenGuard)
 	@Delete(':userid/friends')
 	async deleteFriend(
 		@Param('userid', ParseIntPipe) userId: number,
-		@Body('friendId') friendId: string
+		@Body('friendId', ParseIntPipe) friendId: number
 	) : Promise<MResponse<SendUserDto>> {
-		return this.usersService.deleteFriend(userId, parseInt(friendId));
+		return this.usersService.deleteFriend(userId, friendId);
 	}
 
 	@UseGuards(UserTokenGuard)
