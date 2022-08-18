@@ -2,6 +2,7 @@
 
 - https://docs.nestjs.com (NestJS Docs)
 - https://wanago.io/2021/01/25/api-nestjs-chat-websockets/ (Realtime chat with sockets and database saves)
+- https://wanago.io/2021/03/08/api-nestjs-two-factor-authentication/ (2FA Routes)
 
 # Endpoints
 
