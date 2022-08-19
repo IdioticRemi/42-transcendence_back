@@ -51,7 +51,6 @@ export class UserEntity {
     })
     status: number;
 
-    @JoinTable()
     @ManyToMany(() => ChannelEntity, (channel) => channel.users)
     channels: ChannelEntity[];
 

@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common';
+import {forwardRef, Module} from '@nestjs/common';
 import {ChannelService} from './channel.service';
 import {ChannelController} from './channel.controller';
 import {TypeOrmModule} from '@nestjs/typeorm';

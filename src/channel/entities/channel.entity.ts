@@ -33,7 +33,7 @@ export class ChannelEntity {
     password: string;
 
     @JoinTable()
-    @ManyToMany(() => BannedEntity)
+    @ManyToMany(() => BannedEntity, {cascade: true})
     banned: BannedEntity[]
 
     // TODO: cascade ?

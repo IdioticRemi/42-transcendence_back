@@ -32,11 +32,14 @@ export class ChannelController {
     async createChannel(
         @Req() req: Request,
         @Body('channelName') channelName: string,
-        @Body('password') password: string = "",
-        @Body('isPrivate', ParseBoolPipe) isPrivate: boolean = false,
+        @Body('password') password = "",
+        @Body('isPrivate', ParseBoolPipe) isPrivate= false,
     ): Promise<MResponse<ChannelDto>> {
-        console.debug(req.user);
-        return await this.channelService.createChannel(req.user.id, channelName, password, isPrivate);
+        const r = await this.channelService.createChannel(req.user.id, channelName, password, isPrivate);
+
+        if (!r)
+            return failureMResponse("could not create channel");
+        return successMResponse(r);
     }
 
     @Delete()
@@ -59,7 +62,7 @@ export class ChannelController {
         @Req() req: Request,
         @Body('channelId', ParseIntPipe) channelId: number
     ): Promise<MResponse<ChannelDto>> {
-        return this.channelService.addUserToChannel(req.user, channelId);
+        return this.channelService.addUserToChannel(req.user.id, channelId);
     }
 
     @Delete('users')

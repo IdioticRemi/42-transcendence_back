@@ -12,6 +12,6 @@ export class AddMessageEntityDto {
     content: string;
 
     @IsOptional()
-    channel: ChannelEntity;
+    channelId: number;
 
 }

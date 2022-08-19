@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {forwardRef, Inject, Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {plainToClass} from 'class-transformer';
 import {failureMResponse, MResponse, successMResponse} from 'lib/MResponse';
@@ -51,7 +51,11 @@ export class ChannelService {
         channelName: string,
         password: string,
         isPrivate: boolean
-    ): Promise<MResponse<ChannelDto>> {
+    ): Promise<ChannelDto> {
+
+        const user = await this.userService.getUserById(userId);
+        if (!user)
+            return undefined;
 
         // checks if channel already exists
         const channel = await this.channelRepository.findOne({
@@ -60,24 +64,25 @@ export class ChannelService {
             }
         });
         if (channel)
-            return failureMResponse('a channel with that name already exists');
+            return undefined;
 
         // create channel in DB
-        const newChannel = this.channelRepository.create({
+        const newChannel = await this.channelRepository.create({
             ownerId: userId,
             name: channelName,
             password: password,
             isPrivate: isPrivate
         });
-        if (!newChannel) {
-            return failureMResponse('impossible to create this channel');
-        }
-        console.debug(newChannel);
+        if (!newChannel)
+            return undefined;
+
+        newChannel.users = [user];
+
         return this.channelRepository.save(newChannel)
             .then((newChannel) => {
-                return successMResponse(plainToClass(ChannelDto, newChannel, {excludeExtraneousValues: true}));
+                return plainToClass(ChannelDto, newChannel, {excludeExtraneousValues: true});
             }).catch(() => {
-                return failureMResponse('impossible to register this channel');
+                return undefined;
             });
     }
 
@@ -126,8 +131,7 @@ export class ChannelService {
         return successMResponse(channel.users.map((c) => plainToClass(SendUserDto, c, {excludeExtraneousValues: true})));
     }
 
-    async addUserToChannel(user: UserEntity, channelId: number): Promise<MResponse<ChannelDto>> {
-
+    async addUserToChannel(userId: number, channelId: number): Promise<MResponse<ChannelDto>> {
         const channel = await this.channelRepository.findOne({
             where: {
                 id: channelId
@@ -137,15 +141,21 @@ export class ChannelService {
         if (!channel)
             return failureMResponse("this channel does not exist");
 
-        if (channel.users.find(u => u.id === user.id))
+        if (channel.users.find(u => u.id === userId))
             return failureMResponse("user already on channel");
+
+        const user = await this.userService.getUserById(userId);
+
+        if (!user)
+            return failureMResponse("user not found");
 
         channel.users.push(user);
         return this.channelRepository.save(channel)
             .then(() => {
                 return successMResponse(plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
             })
-            .catch(() => {
+            .catch((e) => {
+                console.error(e);
                 return failureMResponse("cannot register change in database");
             });
     }
@@ -208,11 +218,9 @@ export class ChannelService {
         }
 
         const newMessage = this.messageRepository.create(message)
-        console.debug(newMessage);
         channel.messages.push(newMessage);
         await this.channelRepository.save(channel);
 
-        // TODO: returned messages not up to date
         return newMessage;
     }
 }

@@ -1,4 +1,4 @@
-import {Injectable, NotFoundException} from '@nestjs/common';
+import {Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {failureMResponse, MResponse, successMResponse} from 'lib/MResponse';
 import {Repository} from 'typeorm';
@@ -22,33 +22,23 @@ export class UsersService {
     }
 
     async getUserById(id: number, relations: string[] = []): Promise<UserEntity> {
-        const userResult = await this.usersRepository.findOne({
+        return await this.usersRepository.findOne({
             where: {"id": id},
             relations: relations
         });
-        if (userResult === undefined)
-            throw new NotFoundException(`user does not exist`);
-        return userResult;
     }
 
     async getUserByUsername(user: string): Promise<UserEntity> {
-        const userResult = await this.usersRepository.findOne({
-            where:
-                {"username": user},
+        return await this.usersRepository.findOne({
+            where: {"username": user},
         });
-        if (!userResult)
-            throw new NotFoundException(`user does not exist`);
-        return userResult;
     }
 
     async getUserByToken(token: string, relations: string[] = []): Promise<UserEntity> {
-        const userResult = await this.usersRepository.findOne({
+        return await this.usersRepository.findOne({
             where: {token},
             relations,
         });
-        if (!userResult)
-            throw new NotFoundException(`user does not exist`);
-        return userResult;
     }
 
     async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
@@ -105,14 +95,14 @@ export class UsersService {
         return successMResponse(user.friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true})));
     }
 
-    async getSubscribedChannels(userid: number): Promise<MResponse<ChannelEntity[]>> {
+    async getSubscribedChannels(userid: number, relations: string[] = []): Promise<ChannelEntity[]> {
         const user = await this.usersRepository.findOne({
             where: {id: userid},
-            relations: ['channels']
+            relations: ['channels', ...relations.map(r => "channels." + r)]
         });
         if (!user)
-            return failureMResponse("user does not exist");
-        return successMResponse(user.channels);
+            return undefined;
+        return user.channels;
     }
 
     async addFriend(userId: number, friendId: number): Promise<MResponse<SendUserDto>> {

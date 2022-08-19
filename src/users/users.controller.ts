@@ -13,7 +13,7 @@ import {
     UseInterceptors
 } from '@nestjs/common';
 import {FileInterceptor} from '@nestjs/platform-express';
-import {MResponse, successMResponse} from 'lib/MResponse';
+import {failureMResponse, MResponse, successMResponse} from 'lib/MResponse';
 import {SendUserDto} from './dto/user.dto';
 import {UserEntity} from './entities/user.entity';
 import {UsersService} from './users.service';
@@ -119,7 +119,11 @@ export class UsersController {
     async GetSubscribedChannels(
         @Param('userid', ParseIntPipe) userid: number
     ): Promise<MResponse<ChannelEntity[]>> {
-        return this.usersService.getSubscribedChannels(userid);
+        const res = await this.usersService.getSubscribedChannels(userid);
+
+        if (!res)
+            return failureMResponse("user not found");
+        return successMResponse(res);
     }
 
     @UseGuards(UserTokenGuard)
