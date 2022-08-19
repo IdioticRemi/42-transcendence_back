@@ -7,128 +7,129 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { plainToClass } from 'class-transformer';
-import { Server, Socket } from 'socket.io';
-import { ChannelService } from 'src/channel/channel.service';
-import { AddMessageEntityDto } from 'src/channel/dto/message.dto';
-import { UsersService } from 'src/users/users.service';
-import { SocketService } from './socket.service';
+import {plainToClass} from 'class-transformer';
+import {Server, Socket} from 'socket.io';
+import {ChannelService} from 'src/channel/channel.service';
+import {AddMessageEntityDto} from 'src/channel/dto/message.dto';
+import {UsersService} from 'src/users/users.service';
+import {SocketService} from './socket.service';
 
-@WebSocketGateway({ cors: true })
+@WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(
-    private channelService: ChannelService,
-    private userService: UsersService,
-    private socketService: SocketService,
-  ) {}
+    @WebSocketServer()
+    server: Server;
 
-  @WebSocketServer()
-  server: Server;
-
-  async handleConnection(client: Socket) {
-    console.debug("SOCKET: verifying user connection")
-    // console.debug("SOCKET: ", client.handshake.headers);
-    if (!client.handshake.headers.authorization) {
-      client.disconnect();
-      return;
+    constructor(
+        private channelService: ChannelService,
+        private userService: UsersService,
+        private socketService: SocketService,
+    ) {
     }
 
-    const user = await this.userService.getUserByToken(
-      client.handshake.headers.authorization,
-    );
+    async handleConnection(client: Socket) {
+        console.debug("SOCKET: verifying user connection")
+        // console.debug("SOCKET: ", client.handshake.headers);
+        if (!client.handshake.headers.authorization) {
+            client.disconnect();
+            return;
+        }
 
-    const connectedUser = this.socketService.getConnectedUserById(user.id);
+        const user = await this.userService.getUserByToken(
+            client.handshake.headers.authorization,
+        );
 
-    console.debug("SOCKET: user already online? ", !!connectedUser);
+        const connectedUser = this.socketService.getConnectedUserById(user.id);
 
-    if (user && !connectedUser)
-      this.socketService.connectUser(client.id, user);
-    else
-      client.disconnect();
-    console.debug(this.socketService.getConnectedUser(client.id));
-  }
+        console.debug("SOCKET: user already online? ", !!connectedUser);
 
-  async handleDisconnect(client: Socket) {
-    console.debug("SOCKET: User was disconnected (missing auth or already connected)")
-    this.socketService.disconnectUser(client.id);
-  }
+        if (user && !connectedUser)
+            this.socketService.connectUser(client.id, user);
+        else
+            client.disconnect();
+        console.debug(this.socketService.getConnectedUser(client.id));
+    }
 
-  @SubscribeMessage('channel_join')
-  async joinChannel(
-    @MessageBody() data: { channelId: number },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const user = await this.socketService.getConnectedUser(client.id);
+    async handleDisconnect(client: Socket) {
+        console.debug("SOCKET: User was disconnected (missing auth or already connected)")
+        this.socketService.disconnectUser(client.id);
+    }
 
-    if (!user || !data.channelId) return;
+    @SubscribeMessage('channel_join')
+    async joinChannel(
+        @MessageBody() data: { channelId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = await this.socketService.getConnectedUser(client.id);
 
-    // TODO: Add user to channel
+        if (!user || !data.channelId) return;
 
-    const channel = await this.channelService.getChannelById(data.channelId, [
-      'admins',
-      'users',
-    ]);
+        await this.channelService.addUserToChannel(user, data.channelId);
 
-    if (!channel) return;
+        const channel = await this.channelService.getChannelById(data.channelId, [
+            'admins',
+            'users',
+        ]);
 
-    client.join(`channel_${channel.id}`);
-    client.emit('channel_join', { channelId: channel.id });
-    this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
-  }
+        if (!channel) return;
 
-  @SubscribeMessage('channel_leave')
-  async leaveChannel(
-    @MessageBody() data: { channelId: number },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const user = await this.socketService.getConnectedUser(client.id);
+        client.join(`channel_${channel.id}`);
+        client.emit('channel_join', {channelId: channel.id});
+        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+    }
 
-    if (!user || !data.channelId) return;
+    @SubscribeMessage('channel_leave')
+    async leaveChannel(
+        @MessageBody() data: { channelId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = await this.socketService.getConnectedUser(client.id);
 
-    // TODO: Remove user from channel
+        if (!user || !data.channelId) return;
 
-    const channel = await this.channelService.getChannelById(data.channelId, [
-      'admins',
-      'users',
-    ]);
+        // TODO: Remove user from channel
 
-    if (!channel) return;
+        const channel = await this.channelService.getChannelById(data.channelId, [
+            'admins',
+            'users',
+        ]);
 
-    client.leave(`channel_${channel.id}`);
-    client.emit('channel_leave', { channelId: channel.id });
-    this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
-  }
+        if (!channel) return;
 
-  @SubscribeMessage('channel_message')
-  async handleNewMessage(
-    @MessageBody() data: { channelId: number; content: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const user = await this.socketService.getConnectedUser(client.id);
+        client.leave(`channel_${channel.id}`);
+        client.emit('channel_leave', {channelId: channel.id});
+        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+    }
 
-    if (!user || !data.channelId) return;
+    @SubscribeMessage('channel_message')
+    async handleNewMessage(
+        @MessageBody() data: { channelId: number; content: string },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = await this.socketService.getConnectedUser(client.id);
 
-    const channel = await this.channelService.getChannelById(data.channelId, [
-      'users',
-    ]);
+        if (!user || !data.channelId) return;
 
-    if (!channel) return;
+        const channel = await this.channelService.getChannelById(data.channelId, [
+            'users',
+        ]);
 
-    const res = await this.channelService.addMessage(
-      channel.id,
-      plainToClass(AddMessageEntityDto, {
-        channelId: channel.id,
-        content: data.content,
-        userId: user.id,
-      }),
-    );
+        if (!channel) return;
 
-    if (res.status === 'error') return;
+        const message = await this.channelService.addMessage(
+            channel.id,
+            plainToClass(AddMessageEntityDto, {
+                channelId: channel.id,
+                content: data.content,
+                userId: user.id,
+            }),
+        );
 
-    this.server.to(`channel_${channel.id}`).emit('channel_message', {
-      channelId: channel.id,
-      user,
-      content: res.payload.content,
-    });
-  }
+        if (!message) return;
+
+        this.server.to(`channel_${channel.id}`).emit('channel_message', {
+            channelId: message.channel.id,
+            user,
+            content: message.content,
+        });
+    }
 }

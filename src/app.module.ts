@@ -1,4 +1,4 @@
-import {MiddlewareConsumer, Module, NestModule, RequestMethod} from '@nestjs/common';
+import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
 import {TypeOrmModule} from '@nestjs/typeorm';
 import {DataSource} from 'typeorm';
 import {AppController} from './app.controller';
@@ -20,35 +20,35 @@ import {UserInfoMiddleware} from './auth/auth.middleware';
 import {SocketModule} from './socket/socket.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      entities: [UserEntity, ChannelEntity, GameEntity, BannedEntity, GameQueueEntity, MessageEntity],
-      // synchronize: true => dev only
-      synchronize: true,
-    }),
-    UsersModule,
-    ChannelModule,
-    AuthorizationModule,
-    MulterModule.register({
-      dest: './uploads',
-    }),
-    GameModule,
-    SocketModule
-  ],
-  controllers: [AppController],
-  providers: [AppService, AuthorizationStrategy],
+    imports: [ConfigModule.forRoot(),
+        TypeOrmModule.forRoot({
+            type: 'postgres',
+            host: process.env.DB_HOST,
+            port: parseInt(process.env.DB_PORT),
+            username: process.env.DB_USERNAME,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            entities: [UserEntity, ChannelEntity, GameEntity, BannedEntity, GameQueueEntity, MessageEntity],
+            // synchronize: true => dev only
+            synchronize: true,
+        }),
+        UsersModule,
+        ChannelModule,
+        AuthorizationModule,
+        MulterModule.register({
+            dest: './uploads',
+        }),
+        GameModule,
+        SocketModule
+    ],
+    controllers: [AppController],
+    providers: [AppService, AuthorizationStrategy],
 })
 export class AppModule implements NestModule {
-  constructor(private dataSource: DataSource) {
-  }
+    constructor(private dataSource: DataSource) {
+    }
 
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(UserInfoMiddleware).forRoutes("*");
-  }
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(UserInfoMiddleware).forRoutes("*");
+    }
 }

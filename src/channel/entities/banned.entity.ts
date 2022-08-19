@@ -1,19 +1,19 @@
-import { UserEntity } from "src/users/entities/user.entity";
-import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
-import { ChannelEntity } from "./channel.entity";
+import {UserEntity} from "src/users/entities/user.entity";
+import {Column, Entity, ManyToMany, PrimaryGeneratedColumn} from "typeorm";
+import {ChannelEntity} from "./channel.entity";
 
 @Entity('BannedEntity')
 export class BannedEntity {
 
-	@PrimaryGeneratedColumn()
-	id: number;
+    @PrimaryGeneratedColumn()
+    id: number;
 
-	@ManyToMany( () => UserEntity )
-	user: UserEntity;
+    @ManyToMany(() => UserEntity)
+    user: UserEntity;
 
-	@ManyToMany( ()  => ChannelEntity, channel => channel.banned )
-	channel: ChannelEntity;
+    @ManyToMany(() => ChannelEntity, channel => channel.banned)
+    channel: ChannelEntity;
 
-	@Column()
-	end: Date;
+    @Column()
+    end: Date;
 }

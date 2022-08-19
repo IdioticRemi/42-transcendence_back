@@ -1,51 +1,51 @@
-import { UserEntity } from "src/users/entities/user.entity";
-import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { BannedEntity } from "./banned.entity";
-import { MessageEntity } from "./message.entity";
+import {UserEntity} from "src/users/entities/user.entity";
+import {Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn} from "typeorm";
+import {BannedEntity} from "./banned.entity";
+import {MessageEntity} from "./message.entity";
 
 @Entity('ChannelEntity')
 export class ChannelEntity {
 
-	@PrimaryGeneratedColumn()
-	id: number;
+    @PrimaryGeneratedColumn()
+    id: number;
 
-	@Column({
-		unique: true
-	})
-	name: string;
+    @Column({
+        unique: true
+    })
+    name: string;
 
-	// // @JoinColumn()
-	// @ManyToOne( () => UserEntity )
-	// owner: UserEntity;
+    // // @JoinColumn()
+    // @ManyToOne( () => UserEntity )
+    // owner: UserEntity;
 
-	// TODO: A voir avec Remi
-	@Column()
-	ownerId: number;
+    // TODO: A voir avec Remi
+    @Column()
+    ownerId: number;
 
-	@Column({
-		default: false
-	})
-	isPrivate: boolean;
+    @Column({
+        default: false
+    })
+    isPrivate: boolean;
 
-	@Column({
-		default: ""
-	})
-	password: string;
+    @Column({
+        default: ""
+    })
+    password: string;
 
-	@JoinTable()
-	@ManyToMany( () => BannedEntity )
-	banned: BannedEntity[]
+    @JoinTable()
+    @ManyToMany(() => BannedEntity)
+    banned: BannedEntity[]
 
-	// TODO: cascade ?
-	@JoinTable()
-	@ManyToMany( () => UserEntity, (user) => user.channels)
-	users: UserEntity[];
+    // TODO: cascade ?
+    @JoinTable()
+    @ManyToMany(() => UserEntity, (user) => user.channels)
+    users: UserEntity[];
 
-	@JoinTable()
-	@ManyToMany( () => UserEntity )
-	admins: UserEntity[];
+    @JoinTable()
+    @ManyToMany(() => UserEntity)
+    admins: UserEntity[];
 
-	@OneToMany( () => MessageEntity, message => message.channel, {cascade: true})
-	messages: MessageEntity[];
+    @OneToMany(() => MessageEntity, message => message.channel, {cascade: true})
+    messages: MessageEntity[];
 
 }

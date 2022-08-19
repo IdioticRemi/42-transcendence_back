@@ -6,22 +6,22 @@ export class SocketService {
     private users: Map<string, UserEntity>;
 
     constructor() {
-		this.users = new Map();
-	}
+        this.users = new Map();
+    }
 
-	getConnectedUserById(userId: number) {
-		return [...this.users.values()].find((u) => u.id === userId);
-	}
+    getConnectedUserById(userId: number) {
+        return [...this.users.values()].find((u) => u.id === userId);
+    }
 
-	connectUser(socketId: string, user: UserEntity) {
-		this.users.set(socketId, user);
-	}
+    connectUser(socketId: string, user: UserEntity) {
+        this.users.set(socketId, user);
+    }
 
-	getConnectedUser(socketId: string) {
-		return this.users.get(socketId);
-	}
+    getConnectedUser(socketId: string) {
+        return this.users.get(socketId);
+    }
 
-	disconnectUser(socketId: string) {
-		this.users.delete(socketId);
-	}
+    disconnectUser(socketId: string) {
+        this.users.delete(socketId);
+    }
 }
