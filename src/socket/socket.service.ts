@@ -9,6 +9,10 @@ export class SocketService {
 		this.users = new Map();
 	}
 
+	getConnectedUserById(userId: number) {
+		return [...this.users.values()].find((u) => u.id === userId);
+	}
+
 	connectUser(socketId: string, user: UserEntity) {
 		this.users.set(socketId, user);
 	}

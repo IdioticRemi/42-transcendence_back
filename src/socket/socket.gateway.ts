@@ -26,7 +26,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   async handleConnection(client: Socket) {
-    console.debug("SOCKET: User connected")
+    console.debug("SOCKET: verifying user connection")
     // console.debug("SOCKET: ", client.handshake.headers);
     if (!client.handshake.headers.authorization) {
       client.disconnect();
@@ -37,7 +37,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.handshake.headers.authorization,
     );
 
-    if (user)
+    const connectedUser = this.socketService.getConnectedUserById(user.id);
+
+    console.debug("SOCKET: user already online? ", !!connectedUser);
+
+    if (user && !connectedUser)
       this.socketService.connectUser(client.id, user);
     else
       client.disconnect();
@@ -45,7 +49,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: Socket) {
-    console.debug("SOCKET: User disconnected")
+    console.debug("SOCKET: User was disconnected (missing auth or already connected)")
     this.socketService.disconnectUser(client.id);
   }
 
