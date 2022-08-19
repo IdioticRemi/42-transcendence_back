@@ -20,6 +20,13 @@ export class ChannelController {
 		return await this.channelService.getAllChannels();
 	}
 
+	@Get(':id')
+	async getChannelById(
+		@Param('id', ParseIntPipe) channelId: number
+	) {
+		return this.channelService.getChannelById(channelId);
+	}
+
 	@Post()
 	async createChannel(
 		@Req() req: Request,
@@ -61,6 +68,11 @@ export class ChannelController {
 		@Body('userId', ParseIntPipe) targetId: number,
 	): Promise<MResponse<SendUserDto>> {
 		return this.channelService.deleteUser(req, channelId, targetId);
+	}
+
+	@Get('admins')
+	async getAdmins() {
+		//TODO
 	}
 
 	@Get(':id/messages')

@@ -22,7 +22,11 @@ export class ChannelService {
 	) {}
 
 	async getAllChannels(): Promise<MResponse<ChannelDto[]>> {
-		return await this.channelRepository.find()
+		return await this.channelRepository.find({
+			where: {
+				isPrivate: false
+			}
+		})
 						.then((channels) => {
 							return successMResponse(channels.map( (c) => plainToClass(ChannelDto, c, {excludeExtraneousValues: true})));
 						})
