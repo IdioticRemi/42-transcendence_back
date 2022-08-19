@@ -6,6 +6,7 @@ import { ChannelDto } from './dto/channel.dto';
 import { AddMessageEntityDto } from './dto/message.dto';
 import { MessageEntity } from './entities/message.entity';
 import { Request } from 'express';
+import { SendUserDto } from 'src/users/dto/user.dto';
 
 @UseGuards(UserTokenGuard)
 @Controller('channels')
@@ -36,6 +37,30 @@ export class ChannelController {
 		@Body('channelId', ParseIntPipe) channelId: number
 	): Promise<MResponse<ChannelDto>> {
 		return await this.channelService.deleteChannel(req, channelId);
+	}
+
+	@Get('users')
+	async getUsers(
+		@Body('channelId', ParseIntPipe) channelId: number
+	): Promise<MResponse<SendUserDto[]>> {
+		return this.channelService.getUsers(channelId);
+	}
+
+	@Post('users')
+	async addUser(
+		@Req() req: Request,
+		@Body('channelId', ParseIntPipe) channelId: number
+	): Promise<MResponse<ChannelDto>> {
+		return this.channelService.addUser(req, channelId);
+	}
+
+	@Delete('users')
+	async deleteUser(
+		@Req() req: Request,
+		@Body('channelId', ParseIntPipe) channelId: number,
+		@Body('userId', ParseIntPipe) targetId: number,
+	): Promise<MResponse<SendUserDto>> {
+		return this.channelService.deleteUser(req, channelId, targetId);
 	}
 
 	@Get(':id/messages')

@@ -8,6 +8,8 @@ import { AddMessageEntityDto } from './dto/message.dto';
 import { ChannelEntity } from './entities/channel.entity';
 import { MessageEntity } from './entities/message.entity';
 import { Request } from 'express';
+import { SendUserDto } from 'src/users/dto/user.dto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class ChannelService {
@@ -16,6 +18,7 @@ export class ChannelService {
 		private channelRepository: Repository<ChannelEntity>,
 		@InjectRepository(MessageEntity)
 		private messageRepository: Repository<MessageEntity>,
+		private userService: UsersService
 	) {}
 
 	async getAllChannels(): Promise<MResponse<ChannelDto[]>> {
@@ -100,6 +103,76 @@ export class ChannelService {
 		.catch( () => {
 			return failureMResponse('cannot delete this channel');
 		});
+	}
+
+	async getUsers(channelId: number): Promise<MResponse<SendUserDto[]>> {
+		
+		const channel = await this.channelRepository.findOne({
+			where: {
+				id: channelId
+			},
+			relations: ['users']
+		});
+
+		if (!channel)
+			return failureMResponse("this channel does not exist");
+
+		return successMResponse(channel.users.map( (c) => plainToClass(SendUserDto, c, {excludeExtraneousValues: true})));
+	}
+
+	async addUser(req: Request, channelId: number): Promise<MResponse<ChannelDto>> {
+
+		const user = req.user;
+		const channel = await this.channelRepository.findOne({
+			where: {
+				id: channelId
+			},
+			relations: ['users']
+		})
+		if (!channel)
+			return failureMResponse("this channel does not exist");
+
+		if (channel.users.find( u => u.id === user.id))
+			return failureMResponse("user already on channel");
+
+		channel.users.push(user);
+		return this.channelRepository.save(channel)
+			.then( () => {
+				return successMResponse(plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
+			})
+			.catch( () => {
+				return failureMResponse("cannot register change in database");
+			});
+	}
+
+	async deleteUser(req: Request, channelId: number, targetId: number): Promise<MResponse<SendUserDto>> {
+
+		const user = req.user;
+
+		const target = await this.userService.getUserById(targetId);
+		if (!target)
+			return failureMResponse("this user does not exist");
+		
+		const channel = await this.channelRepository.findOne({
+			where: {
+				id: channelId
+			},
+			relations: ['users', 'admins']
+		})
+		if (!channel)
+			return failureMResponse("this channel does not exist");
+
+		if (target.id != user.id && channel.ownerId != user.id && !channel.admins.find( (u) => u.id === user.id ))
+			return failureMResponse("user has not enough privilege to delete target");
+
+		channel.users = channel.users.filter( u => u.id != target.id);
+		return await this.channelRepository.save(channel)
+						.then(() => {
+							return successMResponse(plainToClass(SendUserDto, target, {excludeExtraneousValues: true}));
+						})
+						.catch(() => {
+							return failureMResponse("database error");
+						});
 	}
 
 	async getMessages(channelId: number): Promise<MResponse<MessageEntity[]>> {
