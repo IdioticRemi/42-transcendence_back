@@ -1,25 +1,23 @@
-import { MiddlewareConsumer, Module, NestModule, UploadedFiles } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { SocketGateway } from './socket/socket.gateway';
-import { UserEntity } from './users/entities/user.entity';
-import { UsersModule } from './users/users.module';
-import { ChannelModule } from './channel/channel.module';
-import { ChannelEntity } from './channel/entities/channel.entity';
-import { AuthorizationModule } from './auth/auth.module';
-import { AuthorizationStrategy } from './auth/auth.strategy';
-import { ConfigModule } from '@nestjs/config';
-import { MulterModule } from '@nestjs/platform-express';
-import { GameModule } from './game/game.module';
-import { GameEntity } from './game/entities/game.entity';
-import { BannedEntity } from './channel/entities/banned.entity';
-import { GameQueueEntity } from './game/entities/game.queue.entity';
-import { MessageEntity } from './channel/entities/message.entity';
-import { UserInfoMiddleware } from './auth/auth.middleware';
-import { SocketService } from './socket/socket.service';
-import { SocketModule } from './socket/socket.module';
+import {MiddlewareConsumer, Module, NestModule, RequestMethod} from '@nestjs/common';
+import {TypeOrmModule} from '@nestjs/typeorm';
+import {DataSource} from 'typeorm';
+import {AppController} from './app.controller';
+import {AppService} from './app.service';
+import {UserEntity} from './users/entities/user.entity';
+import {UsersModule} from './users/users.module';
+import {ChannelModule} from './channel/channel.module';
+import {ChannelEntity} from './channel/entities/channel.entity';
+import {AuthorizationModule} from './auth/auth.module';
+import {AuthorizationStrategy} from './auth/auth.strategy';
+import {ConfigModule} from '@nestjs/config';
+import {MulterModule} from '@nestjs/platform-express';
+import {GameModule} from './game/game.module';
+import {GameEntity} from './game/entities/game.entity';
+import {BannedEntity} from './channel/entities/banned.entity';
+import {GameQueueEntity} from './game/entities/game.queue.entity';
+import {MessageEntity} from './channel/entities/message.entity';
+import {UserInfoMiddleware} from './auth/auth.middleware';
+import {SocketModule} from './socket/socket.module';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -44,7 +42,7 @@ import { SocketModule } from './socket/socket.module';
     SocketModule
   ],
   controllers: [AppController],
-  providers: [AppService, SocketGateway, AuthorizationStrategy, SocketService],
+  providers: [AppService, AuthorizationStrategy],
 })
 export class AppModule implements NestModule {
   constructor(private dataSource: DataSource) {

@@ -1,37 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { Socket } from 'socket.io';
-import { UserEntity } from 'src/users/entities/user.entity';
-import { UsersService } from 'src/users/users.service';
+import {Injectable} from '@nestjs/common';
+import {UserEntity} from 'src/users/entities/user.entity';
 
 @Injectable()
 export class SocketService {
-	constructor(
-		private userService: UsersService
-	) {}
+    private users: Map<string, UserEntity>;
 
-	async getUserFromSocket(client: Socket): Promise<UserEntity | undefined> {
-		const auth_header = client.handshake?.headers?.authorization;
+    constructor() {
+		this.users = new Map();
+	}
 
-	  	if (!auth_header || !auth_header.startsWith("Bearer ") || auth_header.split(" ").length != 2) {
-	  		return undefined;
-	  	}
+	connectUser(socketId: string, user: UserEntity) {
+		this.users.set(socketId, user);
+	}
 
-	  	const token = auth_header.split(" ")[1];
-	  	console.debug(`WS GET USER: Token: ${token}`);
+	getConnectedUser(socketId: string) {
+		return this.users.get(socketId);
+	}
 
-	  	const res_intra = await fetch("https://api.intra.42.fr/oauth/token/info", {
-	  		headers: { Authorization: auth_header }
-	  	});
-
-	  	if (!res_intra.ok)
-	  		return undefined;
-
-	  	const body = await res_intra.json();
-
-	  	try {
-      	return await this.userService.getUserById(body.resource_owner_id);
-	  	} catch (e) {}
-
-    	return undefined;
+	disconnectUser(socketId: string) {
+		this.users.delete(socketId);
 	}
 }
