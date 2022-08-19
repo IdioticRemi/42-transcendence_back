@@ -47,7 +47,7 @@ export class ChannelController {
         @Req() req: Request,
         @Body('channelId', ParseIntPipe) channelId: number
     ): Promise<MResponse<ChannelDto>> {
-        return await this.channelService.deleteChannel(req, channelId);
+        return await this.channelService.deleteChannel(req.user.id, channelId);
     }
 
     @Get('users')

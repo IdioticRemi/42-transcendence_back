@@ -86,7 +86,7 @@ export class ChannelService {
             });
     }
 
-    async deleteChannel(req: Request, channelId: number): Promise<MResponse<ChannelDto>> {
+    async deleteChannel(userId: number, channelId: number): Promise<MResponse<ChannelDto>> {
 
         //check if channel exists
         const channel = await this.channelRepository.findOne({
@@ -100,9 +100,8 @@ export class ChannelService {
         }
 
         // check if user is owner or channel admin
-        if (channel.ownerId != req.user.id && !channel.admins.find((admin) => req.user.id === admin.id))
+        if (channel.ownerId != userId && !channel.admins.find((admin) => userId === admin.id))
             return failureMResponse("user is not operator on this channel")
-
 
         // delete in DB
         return this.channelRepository.delete({

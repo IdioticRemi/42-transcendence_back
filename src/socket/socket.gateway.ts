@@ -184,6 +184,29 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
     }
 
+    @SubscribeMessage('channel_delete')
+    async deleteChannel(
+        @MessageBody() data: { channelId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = await this.socketService.getConnectedUser(client.id);
+
+        console.log("Attempt to delete a channel: ", data.channelId);
+
+        if (!user || !data.channelId) return;
+
+        const channel = await this.channelService.getChannelById(data.channelId, [
+            'admins'
+        ]);
+
+        if (!channel || (channel.ownerId != user.id && !channel.admins.find(u => u.id === user.id))) return;
+
+        await this.channelService.deleteChannel(user.id, channel.id);
+
+        this.server.to(`channel_${channel.id}`).emit('channel_leave', {channelId: channel.id});
+        this.server.to(`channel_${channel.id}`).socketsLeave(`channel_${channel.id}`);
+    }
+
     @SubscribeMessage('channel_leave')
     async leaveChannel(
         @MessageBody() data: { channelId: number },
@@ -193,8 +216,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!user || !data.channelId) return;
 
-        // TODO: Remove user from channel
+        await this.channelService.deleteUserFromChannel(user, data.channelId, user.id);
 
+        console.log("leave channel");
         const channel = await this.channelService.getChannelById(data.channelId, [
             'admins',
             'users',
