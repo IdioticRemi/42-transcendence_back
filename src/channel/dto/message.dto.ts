@@ -7,6 +7,11 @@ export class AddMessageEntityDto {
     @IsNumber()
     userId: number;
 
+
+    @IsNotEmpty()
+    @IsString()
+    userNick: string;
+
     @IsNotEmpty()
     @IsString()
     content: string;

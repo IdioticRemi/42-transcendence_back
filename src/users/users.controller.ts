@@ -21,7 +21,6 @@ import {Express, Response} from 'express';
 import {diskStorage} from 'multer';
 import {extname} from 'path';
 import {maxUploadSize} from 'lib';
-import {ChannelEntity} from 'src/channel/entities/channel.entity';
 import {plainToClass} from 'class-transformer';
 import {UserTokenGuard} from 'src/auth/auth.guard';
 
@@ -43,27 +42,13 @@ export class UsersController {
     async getUserById(
         @Param('id', ParseIntPipe) id: number
     ): Promise<MResponse<SendUserDto>> {
-        return successMResponse(plainToClass(SendUserDto, await this.usersService.getUserById(id), {excludeExtraneousValues: true}));
+        const user = await this.usersService.getUserById(id);
+
+        if (!user)
+            return failureMResponse("user does not exist.");
+        return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
     }
 
-    // @UseGuards(UserTokenGuard)
-    // @Post('register')
-    // addUser(
-    // 	@Body() newuserdto: AddUserDto
-    // 	) : Promise<MResponse<SendUserDto>> {
-    // 		return this.usersService.addUser(newuserdto);
-    // 	}
-
-    // @UseGuards(UserTokenGuard)
-    // @Delete(':id')
-    // softRemoveUser(
-    // 	@Param('id', ParseIntPipe) id: number
-    // 	) {
-    // 		return this.usersService.softRemoveUser(id);
-    // 	}
-
-    // the interceptor work on the 'file' field of the request
-    // returns 415 error if file type is wrong and 413 if file too large
     @UseGuards(UserTokenGuard)
     @Post('avatar/:user')
     @UseInterceptors(FileInterceptor('file', {
@@ -81,13 +66,13 @@ export class UsersController {
             cb(null, true);
         },
     }))
-    uploadFile(
+    async uploadFile(
         @UploadedFile() file: Express.Multer.File,
         @Param('user') user: string,
-    ): void {
+    ): Promise<void> {
         console.log(user, file);
         console.log(file.mimetype);
-        this.usersService.updateAvatar(user, file.path);
+        await this.usersService.updateAvatar(user, file.path);
     }
 
     @Get('avatar/:user')
@@ -99,39 +84,16 @@ export class UsersController {
         res.sendFile(userResult.img_path, {root: './'});
     }
 
-    // readStream version
-    // @Get('avatar/:user')
-    // async getFileStream(
-    // 	@Param('user') user: string,
-    // 	@Res() res
-    // ): Promise<void> {
-    // 	const userResult = await this.usersService.getUserByUsername(user);
-    // 	const fileType = extname(userResult.img_path);
-    // 	const file = createReadStream(join(process.cwd(), userResult.img_path))
-    // 	res.set({
-    // 		'Content-Type': 'image/' + fileType.substring(1)
-    // 	});
-    // 	file.pipe(res);
-    // }
-
-    @UseGuards(UserTokenGuard)
-    @Get(':userid/channels')
-    async GetSubscribedChannels(
-        @Param('userid', ParseIntPipe) userid: number
-    ): Promise<MResponse<ChannelEntity[]>> {
-        const res = await this.usersService.getSubscribedChannels(userid);
-
-        if (!res)
-            return failureMResponse("user not found");
-        return successMResponse(res);
-    }
-
     @UseGuards(UserTokenGuard)
     @Get(':userid/friends')
     async GetFriends(
         @Param('userid', ParseIntPipe) userid: number
     ): Promise<MResponse<SendUserDto[]>> {
-        return this.usersService.getFriends(userid);
+        const friends = await this.usersService.getFriends(userid);
+
+        if (friends)
+            return successMResponse(friends);
+        return failureMResponse("failed to fetch friends");
     }
 
     @UseGuards(UserTokenGuard)

@@ -84,15 +84,46 @@ export class UsersService {
         });
     }
 
-    async getFriends(userid: number): Promise<MResponse<SendUserDto[]>> {
+    async getFriends(userid: number): Promise<SendUserDto[]> {
         const user = await this.usersRepository.findOne({
             where: {id: userid},
             relations: ['friends']
         });
         if (!user)
-            return failureMResponse("user does not exist");
+            return null;
 
-        return successMResponse(user.friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true})));
+        const friends = [] as UserEntity[];
+        for (const f of user.friends) {
+            const friend = await this.getUserById(f.id, ['friends']);
+
+            if (friend.friends.find(fr => fr.id === user.id)) {
+                delete friend.friends;
+                friends.push(friend);
+            }
+        }
+
+        return friends.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true}));
+    }
+
+    async getPendingFriends(userid: number): Promise<SendUserDto[]> {
+        const user = await this.usersRepository.findOne({
+            where: {id: userid},
+            relations: ['friends']
+        });
+        if (!user)
+            return null;
+
+        const pending = [] as UserEntity[];
+        for (const f of user.friends) {
+            const friend = await this.getUserById(f.id, ['friends']);
+
+            if (!friend.friends.find(fr => fr.id === user.id)) {
+                delete friend.friends;
+                pending.push(friend);
+            }
+        }
+
+        return pending.map((f) => plainToClass(SendUserDto, f, {excludeExtraneousValues: true}));
     }
 
     async getSubscribedChannels(userid: number, relations: string[] = []): Promise<ChannelEntity[]> {
@@ -112,6 +143,7 @@ export class UsersService {
         if (!user || !friend) {
             return failureMResponse("target or user does not exist")
         }
+
         //check if already friends
         if (user.friends.find((f) => friend.id === f.id)) {
             return failureMResponse("target is already the user's friend");
@@ -133,12 +165,8 @@ export class UsersService {
 
         // save to database
         user.friends.push(friend_cpy);
-        friend.friends.push(user_cpy);
 
         await this.usersRepository.save(user).catch(() => {
-            return failureMResponse("unable to register change in the database")
-        });
-        await this.usersRepository.save(friend).catch(() => {
             return failureMResponse("unable to register change in the database")
         });
 
@@ -241,4 +269,10 @@ export class UsersService {
             });
     }
 
+    async getUserByNickname(nickname: string, relations: string[] = []): Promise<UserEntity> {
+        return await this.usersRepository.findOne({
+            where: {nickname},
+            relations,
+        });
+    }
 }

@@ -69,8 +69,7 @@ export class AuthorizationService {
                 if (!response.ok) {
                     return Promise.reject(`Error ${response.status}: Failed to get user infos`);
                 }
-                let json = await response.json() as GetUserDto;
-                //   console.log("user info's response:", json);
+                const json = await response.json() as GetUserDto;
                 if (json.hasOwnProperty('id') && json.hasOwnProperty('login')) {
                     const id42 = json.id;
                     const username = json.login;
@@ -95,7 +94,7 @@ export class AuthorizationService {
     }
 
     async logUser(id42: string, username: string, token: string): Promise<Partial<UserEntity>> {
-        let user = await this.userRepository.findOne({
+        const user = await this.userRepository.findOne({
             where: {
                 "username": username
             }
@@ -105,6 +104,7 @@ export class AuthorizationService {
             const newUser = await this.userRepository.save({
                 "id": parseInt(id42),
                 "username": username,
+                "nickname": username,
                 "token": token
             })
                 .catch(() => {

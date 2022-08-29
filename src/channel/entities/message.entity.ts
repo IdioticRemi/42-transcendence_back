@@ -14,6 +14,9 @@ export class MessageEntity {
     userId: number;
 
     @Column()
+    userNick: string;
+
+    @Column()
     content: string;
 
 }

@@ -38,8 +38,8 @@ export class AuthorizationController {
         console.log('Callback from 42 API', 'code retrieved:', code);
         const user = await this.authorizationService.authenticate(code, res);
         console.log(user);
-        if (user !== undefined)
-            res.redirect(`http://localhost:8081/?token=${user.token}`);
-        else res.redirect('http://localhost:8081?token=null');
+        if (user)
+            res.redirect(`http://localhost:8081/login?token=${user.token}`);
+        else res.redirect('http://localhost:8081/login?token=null');
     }
 }
