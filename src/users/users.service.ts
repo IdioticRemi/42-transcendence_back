@@ -283,8 +283,10 @@ export class UsersService {
     }
 
     async setNickname(userId: number, newNick: string): Promise<boolean> {
-        return this.usersRepository.update({
-            id: userId,
-        }, { nickname: newNick }).catch(() => {return false}).then(() => {return true});
+        return new Promise((resolve) => {
+            this.usersRepository.update({
+                id: userId,
+            }, { nickname: newNick }).catch(() => {resolve(false);}).then(() => resolve(true));
+        });
     }
 }

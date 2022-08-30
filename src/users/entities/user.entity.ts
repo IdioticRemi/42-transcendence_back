@@ -41,8 +41,8 @@ export class UserEntity {
     username: string;
 
     @Column({
-        default: "",
         length: 16,
+        unique: true,
     })
     nickname: string;
 

@@ -25,6 +25,10 @@ export class SocketService {
         }
     }
 
+    updateUserNickname(userId: number, newNick: string) {
+        this.getConnectedUserById(userId).nickname = newNick;
+    }
+
     getMessages(user1: number, user2: number): any[] {
         return this.messages.get([user1, user2].sort().join('')) || [];
     }

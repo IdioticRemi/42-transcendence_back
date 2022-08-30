@@ -98,12 +98,26 @@ export class AuthorizationService {
                 "username": username
             }
         });
+
         if (!user) {
+            let nickname = username;
+            let alreadyExist = true;
+
+            while (alreadyExist) {
+                alreadyExist = !!(await this.usersService.getUserByNickname(nickname));
+
+                nickname = username + '_';
+                const characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                const charactersLength = characters.length;
+                for (let i = 0; nickname.length < 16; i++ ) {
+                    nickname += characters.charAt(Math.floor(Math.random() * charactersLength));
+                }
+            }
             console.log(`AUTH: INITIALIZING NEW USER: ${username} (${id42})`);
             const newUser = await this.userRepository.save({
                 "id": parseInt(id42),
                 "username": username,
-                "nickname": username,
+                "nickname": nickname,
                 "token": token
             })
                 .catch(() => {

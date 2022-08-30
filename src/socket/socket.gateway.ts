@@ -291,17 +291,21 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.friendId || !data.content || /^\s*$/.test(data.content)) return;
+        if (!user || !data.friendId || !data.content || /^\s*$/.test(data.content))  {
+            client.emit('error', `Invalid data`);
+            return;
+        }
 
         const friend = await this.userService.getUserById(data.friendId, [
             'friends',
         ]);
 
-        if (!friend || !friend.friends.find(u => u.id === user.id)) return;
+        if (!friend || !friend.friends.find(u => u.id === user.id)) {
+            client.emit('error', `This person is not your friend`);
+            return;
+        }
 
         this.socketService.sendMessage(client.id, friend.id, data.content);
-
-        // if (!message) return;
 
         const msg = {
             friendId: friend.id,
@@ -323,12 +327,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user) return;
+        if (!user) {
+            client.emit('error', `??? What the heck ???`);
+            return;
+        }
 
         const userFriends = await this.userService.getFriends(user.id);
         const userPendingFriends = await this.userService.getPendingFriends(user.id);
 
-        if (!userFriends || !userPendingFriends) return;
+        if (!userFriends || !userPendingFriends) {
+            client.emit('error', `Data error`);
+            return;
+        }
 
         userFriends.forEach((c) => {
             const isConnected = !!this.socketService.getConnectedUserById(c.id);
@@ -348,16 +358,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.userNick) return;
+        if (!user || !data.userNick) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
 
         const friend = await this.userService.getUserByNickname(data.userNick, ['friends']);
 
-        if (!friend || friend.id === user.id) return;
+        if (!friend || friend.id === user.id) {
+            client.emit('error', `Could not add user as friend`);
+            return;
+        }
 
         const r = await this.userService.addFriend(user.id, friend.id);
 
-        if (r.status !== "success")
+        if (r.status !== "success") {
+            client.emit('error', `Could not add user as friend`);
             return;
+        }
 
         if (friend.friends.find(f => f.id === user.id)) {
             const friendSocket = this.socketService.getUserKVByUserId(friend.id);
@@ -380,16 +398,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.friendId) return;
+        if (!user || !data.friendId) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
 
         const friend = await this.userService.getUserById(data.friendId, ['friends']);
 
-        if (!friend) return;
+        if (!friend) {
+            client.emit('error', `Failed to remove friend`);
+            return;
+        }
 
         const r = await this.userService.deleteFriend(user.id, friend.id);
 
-        if (r.status !== "success")
+        if (r.status !== "success") {
+            client.emit('error', `Failed to remove friend`);
             return;
+        }
 
         const friendSocket = this.socketService.getUserKVByUserId(friend.id);
         const friendIsConnected = !!friendSocket;
@@ -409,16 +435,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         const userData = await this.userService.getUserById(user.id, ['friends']);
 
-        if (!user || !userData || !data.userId) return;
+        if (!user || !userData || !data.userId) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
 
         const target = await this.userService.getUserById(data.userId, ['friends']);
 
-        if (!target || target.id === user.id) return;
+        if (!target || target.id === user.id) {
+            client.emit('error', `Failed to block user ${user.nickname}`);
+            return;
+        }
 
         const r = await this.userService.addBlocked(user.id, target.id);
 
-        if (r.status !== "success")
+        if (r.status !== "success") {
+            client.emit('error', `Failed to block user ${user.nickname}`);
             return;
+        }
 
         const friendSocket = this.socketService.getUserKVByUserId(target.id);
         const friendIsConnected = !!friendSocket;
@@ -439,16 +473,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         const userData = await this.userService.getUserById(user.id);
 
-        if (!user || !userData || !data.userId) return;
+        if (!user || !userData || !data.userId) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
 
         const target = await this.userService.getUserById(data.userId);
 
-        if (!target || target.id === user.id) return;
+        if (!target || target.id === user.id) {
+            client.emit('error', `Failed to unblock user ${user.nickname}`);
+            return;
+        }
 
         const r = await this.userService.deleteBlocked(user.id, target.id);
 
-        if (r.status !== "success")
+        if (r.status !== "success") {
+            client.emit('error', `Failed to unblock user ${user.nickname}`);
             return;
+        }
 
         client.emit('user_unblock', { userId: target.id });
     }
@@ -460,13 +502,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.newNick || /^\s*$/.test(data.newNick)) return;
-        if (data.newNick.length > 16 || data.newNick.length < 4) return;
+        if (!user || !data.newNick || /^\s*$/.test(data.newNick)) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
+
+        if (data.newNick.length > 16 || data.newNick.length < 4) {
+            client.emit('error', `Nickname must include 4 to 16 characters`);
+            return;
+        }
 
         const success = await this.userService.setNickname(user.id, data.newNick);
 
-        if (!success)
+        if (!success) {
+            client.emit('error', `Nickname ${data.newNick} is already taken`);
             return;
+        }
+
+        this.socketService.updateUserNickname(user.id, data.newNick);
 
         client.emit('user_nick', { newNick: data.newNick });
     }
