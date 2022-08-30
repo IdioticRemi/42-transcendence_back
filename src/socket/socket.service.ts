@@ -15,7 +15,7 @@ export class SocketService {
         const user = this.users.get(from);
 
         if (user) {
-            const target = [user.id, to].sort((a, b) => a - b).join('');
+            const target = [user.id, to].sort().join('');
 
             if (!this.messages.has(target)) {
                 this.messages.set(target, []);
@@ -26,11 +26,23 @@ export class SocketService {
     }
 
     getMessages(user1: number, user2: number): any[] {
-        return this.messages.get([user1, user2].sort((a, b) => a - b).join('')) || [];
+        return this.messages.get([user1, user2].sort().join('')) || [];
+    }
+
+    clearMessages(user1: number, user2: number): boolean {
+        return this.messages.delete([user1, user2].sort().join(''));
     }
 
     getConnectedUserById(userId: number) {
         return [...this.users.values()].find((u) => u.id === userId);
+    }
+
+    getUserKVByUserId(userId: number) {
+        return [...this.users.entries()].find((u) => u[1].id === userId);
+    }
+
+    getUserKVById(socketId: string) {
+        return [...this.users.entries()].find((u) => u[0] === socketId);
     }
 
     connectUser(socketId: string, user: UserEntity) {

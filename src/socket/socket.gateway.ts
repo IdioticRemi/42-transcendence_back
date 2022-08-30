@@ -50,10 +50,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join(`prv_${user.id}`);
 
         user.friends.forEach(f => {
-            const friend = this.socketService.getConnectedUserById(f.id);
+            const friend = this.socketService.getUserKVByUserId(f.id);
 
             if (friend) {
-                this.server.to(`prv_${friend.id}`).emit("friend_status", { id: user.id, status: 'online' });
+                this.server.to(friend[0]).emit("friend_status", { id: user.id, status: 'online' });
             }
         });
 
@@ -65,10 +65,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (user) {
             user.friends.forEach(f => {
-                const friend = this.socketService.getConnectedUserById(f.id);
+                const friend = this.socketService.getUserKVByUserId(f.id);
 
                 if (friend) {
-                    this.server.to(`prv_${friend.id}`).emit("friend_status", { id: user.id, status: 'offline' });
+                    this.server.to(friend[0]).emit("friend_status", { id: user.id, status: 'offline' });
                 }
             });
         }
@@ -93,36 +93,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.join(`channel_${c.id}`);
             client.emit('channel_info', c);
         });
-    }
-
-    @SubscribeMessage('friend_list')
-    async getFriendList(
-        @ConnectedSocket() client: Socket,
-    ) {
-        const user = this.socketService.getConnectedUser(client.id);
-
-        if (!user) return;
-
-        const userFriends = await this.userService.getFriends(user.id);
-        const userPendingFriends = await this.userService.getPendingFriends(user.id);
-
-        if (!userFriends || !userPendingFriends) return;
-
-        userFriends.forEach((c) => {
-            const isConnected = !!this.socketService.getConnectedUserById(c.id);
-            const [small, big] = [user.id, c.id].sort((a, b) => a - b);
-
-            client.join(`friend_${small}_${big}`);
-            client.emit('friend_info', { id: c.id, nickname: c.nickname, status: isConnected ? 'online' : 'offline', messages: this.socketService.getMessages(user.id, c.id) });
-        });
-
-        userPendingFriends.forEach((p) => {
-            const [small, big] = [user.id, p.id].sort((a, b) => a - b);
-
-            client.join(`friend_${small}_${big}`);
-            client.emit('friend_info', { id: p.id, nickname: p.nickname, status: 'pending', messages: [] });
-        })
-        // TODO: Send la liste des amis PENDING
     }
 
     @SubscribeMessage('channel_info')
@@ -209,33 +179,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
-    }
-
-    @SubscribeMessage('friend_add')
-    async addFriend(
-        @MessageBody() data: { userNick: string },
-        @ConnectedSocket() client: Socket,
-    ) {
-        const user = this.socketService.getConnectedUser(client.id);
-
-        if (!user || !data.userNick) return;
-
-        const friend = await this.userService.getUserByNickname(data.userNick, ['friends']);
-
-        if (!friend) return;
-
-        await this.userService.addFriend(user.id, friend.id);
-
-        if (friend.friends.find(f => f.id === user.id)) {
-            const isConnected = !!this.socketService.getConnectedUserById(friend.id);
-            const [small, big] = [user.id, friend.id].sort((a, b) => a - b);
-
-            client.join(`friend_${small}_${big}`);
-            client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: isConnected ? 'online' : 'offline', messages: this.socketService.getMessages(user.id, friend.id) });
-        }
-        else {
-            client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: 'pending', messages: [] });
-        }
     }
 
     @SubscribeMessage('channel_join')
@@ -364,12 +307,98 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // if (!message) return;
 
-        const [small, big] = [user.id, friend.id].sort((a, b) => a - b);
-        this.server.to(`friend_${small}_${big}`).emit('friend_message', {
+        const msg = {
             friendId: friend.id,
             userId: user.id,
             userNick: user.nickname,
             content: data.content,
+        };
+
+        const friendSocket = this.socketService.getUserKVByUserId(friend.id);
+
+        if (friendSocket)
+            this.server.to(friendSocket[0]).emit('friend_message', msg);
+        client.emit('friend_message', msg);
+    }
+
+    @SubscribeMessage('friend_list')
+    async getFriendList(
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user) return;
+
+        const userFriends = await this.userService.getFriends(user.id);
+        const userPendingFriends = await this.userService.getPendingFriends(user.id);
+
+        if (!userFriends || !userPendingFriends) return;
+
+        userFriends.forEach((c) => {
+            const isConnected = !!this.socketService.getConnectedUserById(c.id);
+
+            client.emit('friend_info', { id: c.id, nickname: c.nickname, status: isConnected ? 'online' : 'offline', messages: this.socketService.getMessages(user.id, c.id) });
         });
+
+        userPendingFriends.forEach((p) => {
+            client.emit('friend_info', { id: p.id, nickname: p.nickname, status: 'pending', messages: [] });
+        });
+    }
+
+    @SubscribeMessage('friend_add')
+    async addFriend(
+        @MessageBody() data: { userNick: string },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !data.userNick) return;
+
+        const friend = await this.userService.getUserByNickname(data.userNick, ['friends']);
+
+        if (!friend || friend.id === user.id) return;
+
+        await this.userService.addFriend(user.id, friend.id);
+
+        if (friend.friends.find(f => f.id === user.id)) {
+            const friendSocket = this.socketService.getUserKVByUserId(friend.id);
+            const isFriendConnected = !!friendSocket;
+
+            if (isFriendConnected)
+                this.server.to(friendSocket[0]).emit('friend_info', { id: user.id, nickname: user.nickname, status: 'online', messages: [] });
+
+            client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: isFriendConnected ? 'online' : 'offline', messages: [] });
+        }
+        else {
+            client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: 'pending', messages: [] });
+        }
+    }
+
+    @SubscribeMessage('friend_remove')
+    async removeFriend(
+        @MessageBody() data: { friendId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !data.friendId) return;
+
+        const friend = await this.userService.getUserById(data.friendId, ['friends']);
+
+        if (!friend) return;
+
+        const r = await this.userService.deleteFriend(user.id, friend.id);
+
+        if (r.status !== "success")
+            console.warn(r.message);
+
+        const friendSocket = this.socketService.getUserKVByUserId(friend.id);
+        const friendIsConnected = !!friendSocket;
+
+        if (friendIsConnected)
+            this.server.to(friendSocket[0]).emit('friend_remove', { friendId: user.id });
+
+        client.emit('friend_remove', { friendId: friend.id });
+        this.socketService.clearMessages(friend.id, user.id);
     }
 }
