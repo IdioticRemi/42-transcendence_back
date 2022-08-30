@@ -1,9 +1,13 @@
 import {Controller, Get, Query, Res,} from '@nestjs/common';
 import {AuthorizationService} from './auth.service';
+import {UsersService} from "../users/users.service";
 
 @Controller('auth')
 export class AuthorizationController {
-    constructor(private authorizationService: AuthorizationService) {
+    constructor(
+        private authorizationService: AuthorizationService,
+        private usersService: UsersService
+    ) {
     }
 
     @Get()
@@ -15,8 +19,7 @@ export class AuthorizationController {
 
     @Get('check')
     async CheckRequest(@Query('token') token: string) {
-        console.debug(token);
-        const user = await this.authorizationService.getUser(token);
+        const user = await this.usersService.getUserByToken(token);
         if (user) {
             delete user.token;
             return {
@@ -26,7 +29,7 @@ export class AuthorizationController {
             };
         } else {
             return {
-                message: 'Token is invalid or has expired',
+                message: 'Token is invalid',
                 content: null,
                 error: true,
             };
@@ -35,9 +38,7 @@ export class AuthorizationController {
 
     @Get('42Auth/callback')
     async AuthRedirect(@Query('code') code, @Res() res) {
-        console.log('Callback from 42 API', 'code retrieved:', code);
         const user = await this.authorizationService.authenticate(code, res);
-        console.log(user);
         if (user)
             res.redirect(`http://localhost:8081/login?token=${user.token}`);
         else res.redirect('http://localhost:8081/login?token=null');

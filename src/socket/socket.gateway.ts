@@ -28,7 +28,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     async handleConnection(client: Socket) {
         console.debug("SOCKET: verifying user connection")
-        // console.debug("SOCKET: ", client.handshake.headers);
         if (!client.handshake.headers.authorization) {
             client.disconnect();
             return;
@@ -38,11 +37,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.handshake.headers.authorization, ['friends', 'blocked']
         );
 
-        // const connectedUser = this.socketService.getConnectedUserById(user.id);
-
-        // console.debug("SOCKET: user already online? ", !!connectedUser);
-
-        if (!user /*&& !connectedUser*/) {
+        if (!user) {
             client.disconnect();
             return;
         }
@@ -57,7 +52,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
         });
 
-        console.debug(this.socketService.getConnectedUser(client.id));
+        user.blocked.forEach(b => {
+            client.emit('user_block', { userId: b.id, userNick: b.nickname })
+        });
     }
 
     async handleDisconnect(client: Socket) {
@@ -73,7 +70,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             });
         }
 
-        // console.debug("SOCKET: User was disconnected (missing auth or already connected)")
         this.socketService.disconnectUser(client.id);
     }
 
@@ -358,7 +354,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!friend || friend.id === user.id) return;
 
-        await this.userService.addFriend(user.id, friend.id);
+        const r = await this.userService.addFriend(user.id, friend.id);
+
+        if (r.status !== "success")
+            return;
 
         if (friend.friends.find(f => f.id === user.id)) {
             const friendSocket = this.socketService.getUserKVByUserId(friend.id);
@@ -390,7 +389,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const r = await this.userService.deleteFriend(user.id, friend.id);
 
         if (r.status !== "success")
-            console.warn(r.message);
+            return;
 
         const friendSocket = this.socketService.getUserKVByUserId(friend.id);
         const friendIsConnected = !!friendSocket;
@@ -400,5 +399,75 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.emit('friend_remove', { friendId: friend.id });
         this.socketService.clearMessages(friend.id, user.id);
+    }
+
+    @SubscribeMessage('user_block')
+    async blockFriend(
+        @MessageBody() data: { userId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        const userData = await this.userService.getUserById(user.id, ['friends']);
+
+        if (!user || !userData || !data.userId) return;
+
+        const target = await this.userService.getUserById(data.userId, ['friends']);
+
+        if (!target || target.id === user.id) return;
+
+        const r = await this.userService.addBlocked(user.id, target.id);
+
+        if (r.status !== "success")
+            return;
+
+        const friendSocket = this.socketService.getUserKVByUserId(target.id);
+        const friendIsConnected = !!friendSocket;
+
+        if (friendIsConnected && target.friends.find(f => f.id === user.id))
+            this.server.to(friendSocket[0]).emit('friend_remove', { friendId: user.id });
+        if (userData.friends.find(f => f.id === target.id))
+            client.emit('friend_remove', { friendId: target.id });
+        this.socketService.clearMessages(target.id, user.id);
+        client.emit('user_block', { userId: target.id, userNick: target.nickname });
+    }
+
+    @SubscribeMessage('user_unblock')
+    async unblockFriend(
+        @MessageBody() data: { userId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        const userData = await this.userService.getUserById(user.id);
+
+        if (!user || !userData || !data.userId) return;
+
+        const target = await this.userService.getUserById(data.userId);
+
+        if (!target || target.id === user.id) return;
+
+        const r = await this.userService.deleteBlocked(user.id, target.id);
+
+        if (r.status !== "success")
+            return;
+
+        client.emit('user_unblock', { userId: target.id });
+    }
+
+    @SubscribeMessage('user_nick')
+    async changeNickname(
+        @MessageBody() data: { newNick: string },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !data.newNick || /^\s*$/.test(data.newNick)) return;
+        if (data.newNick.length > 16 || data.newNick.length < 4) return;
+
+        const success = await this.userService.setNickname(user.id, data.newNick);
+
+        if (!success)
+            return;
+
+        client.emit('user_nick', { newNick: data.newNick });
     }
 }

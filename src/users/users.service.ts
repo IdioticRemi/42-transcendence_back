@@ -153,6 +153,12 @@ export class UsersService {
         if (friend.blocked.find((f) => user.id === f.id)) {
             return failureMResponse("user is blocked by target");
         }
+
+        // check if user has blocked the target
+        if (user.blocked.find((f) => friend.id === f.id)) {
+            return failureMResponse("target is blocked by user");
+        }
+
         // save copies
         const user_cpy = Object.assign({}, user) as UserEntity;
         const friend_cpy = Object.assign({}, friend) as UserEntity;
@@ -220,6 +226,7 @@ export class UsersService {
         if (!user || !toBlock) {
             return failureMResponse("target or user does not exist");
         }
+
         //check if already blocked
         if (user.blocked.find((b) => toBlock.id === b.id)) {
             return failureMResponse("target is already blocked by user");
@@ -227,7 +234,6 @@ export class UsersService {
 
         // check if user is friend with the target and remove friendship if necessary
         if (user.friends.find((f) => toBlock.id === f.id)) {
-            console.debug("removing friendship");
             await this.deleteFriend(user.id, toBlock.id);
             delete user.friends;
         }
@@ -274,5 +280,11 @@ export class UsersService {
             where: {nickname},
             relations,
         });
+    }
+
+    async setNickname(userId: number, newNick: string): Promise<boolean> {
+        return this.usersRepository.update({
+            id: userId,
+        }, { nickname: newNick }).catch(() => {return false}).then(() => {return true});
     }
 }

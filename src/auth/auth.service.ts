@@ -4,10 +4,11 @@ import {UserEntity} from 'src/users/entities/user.entity';
 import {Repository} from 'typeorm';
 import fetch from "node-fetch";
 import {JsonResponseInterface} from 'lib/api.objects';
-import {GetUserDto} from 'src/users/dto/user.dto';
+import {GetUserDto, SendUserDto} from 'src/users/dto/user.dto';
 import * as fs from 'fs';
 import axios from 'axios';
 import {UsersService} from 'src/users/users.service';
+import {plainToClass} from "class-transformer";
 
 
 @Injectable()
@@ -41,22 +42,21 @@ export class AuthorizationService {
         };
         const token = await fetch("https://api.intra.42.fr/oauth/token", options)
             .then(async (response) => {
-                let json = await response.json() as JsonResponseInterface;
+                const json = await response.json() as JsonResponseInterface;
                 // console.log("token request's response:", json);
                 if (!response.ok) {
                     return Promise.reject(json.message);
                 }
-                const token = json.access_token as string;
-                return token;
+                return json.access_token as string;
             })
             .catch((error) => {
                 console.log(error);
-                return ''; // return empty token if error
+                return '';
             });
         return Promise.resolve(token);
     }
 
-    async getUser(token: string) {
+    async getUser(token: string): Promise<UserEntity | undefined> {
         const options = {
             method: "GET",
             headers: {
@@ -88,19 +88,18 @@ export class AuthorizationService {
         const token = await this.getToken(code, res);
         if (token === '')
             return undefined;
-        console.log("token obtained:", token);
-        // get user info
+        console.log("AUTH: NEW TOKEN GENERATED:", token);
         return this.getUser(token);
     }
 
-    async logUser(id42: string, username: string, token: string): Promise<Partial<UserEntity>> {
+    async logUser(id42: string, username: string, token: string): Promise<UserEntity> {
         const user = await this.userRepository.findOne({
             where: {
                 "username": username
             }
         });
         if (!user) {
-            console.log("unregistered user, creating new account with credentials:", username, token);
+            console.log(`AUTH: INITIALIZING NEW USER: ${username} (${id42})`);
             const newUser = await this.userRepository.save({
                 "id": parseInt(id42),
                 "username": username,
@@ -110,8 +109,9 @@ export class AuthorizationService {
                 .catch(() => {
                     console.log("cannot register user", username)
                 });
-            // download 42 intra's picture
-            console.log(`downloading intra picture from https://cdn.intra.42.fr/users/${username}.jpg`);
+            if (!newUser)
+                return undefined;
+            console.log(`AUTH: DOWNLOADING FILE: https://cdn.intra.42.fr/users/${username}.jpg`);
             const imgPath = `./uploads/${username}.jpg`;
             const url = `https://cdn.intra.42.fr/users/${username}.jpg`;
             axios({url, method: 'GET', responseType: 'stream'})
@@ -126,15 +126,15 @@ export class AuthorizationService {
                     }
                 })
                 .catch(() => {
-                    console.log("impossible to download 42's picture");
+                    console.log('AUTH: Could not download user pfp');
                 });
-            return newUser as Partial<UserEntity>;
+            return newUser;
         }
         if (user.token !== token) {
             await this.userRepository.update({id: user.id}, {token});
             user.token = token;
         }
-        console.log(`${user.username} is already registered in the database`);
+        console.log(`AUTH: EXISTING USER: ${user.username}`);
         return user;
     }
 }
