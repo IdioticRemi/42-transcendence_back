@@ -13,6 +13,7 @@ import {ChannelService} from 'src/channel/channel.service';
 import {AddMessageEntityDto} from 'src/channel/dto/message.dto';
 import {UsersService} from 'src/users/users.service';
 import {SocketService} from './socket.service';
+import * as argon2 from "argon2";
 
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -155,12 +156,21 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('private' in data) || !data.name) return;
+        if (!user || !('private' in data) || !data.name) {
+            client.emit('error', 'cannot create this channel');
+            return;
+        }
+
+        if ('password' in data)
+            data.private = true;
 
         const ret = await this.channelService.createChannel(user.id, data.name, data.password || "", data.private);
         // await this.channelService.addUserToChannel(user.id, data.channelId);
 
-        console.log(ret);
+        if (!ret) {
+            client.emit('error', 'Could not create channel');
+            return;
+        }
 
         const id = ret.id;
 
@@ -195,6 +205,49 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ]);
 
         if (!channel) return;
+
+        client.join(`channel_${channel.id}`);
+        client.emit('channel_join', {channelId: channel.id});
+        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+    }
+
+    @SubscribeMessage('channel_joinprv')
+    async joinPrivateChannel(
+        @MessageBody() data: { channelName: string, password?: string },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !data.channelName) return;
+
+        const channel = await this.channelService.getChannelByName(data.channelName, [
+            'admins',
+            'users',
+            'messages'
+        ]);
+
+        if (!channel) {
+            client.emit('error', `No channel found with this name`);
+            return;
+        }
+
+        if (channel.password !== "") {
+            if (!('password' in data)) {
+                client.emit('error', `Invalid password`);
+                return;
+            }
+            try {
+                if (!(await argon2.verify(channel.password, data.password))) {
+                    client.emit('error', `Invalid password`);
+                    return;
+                }
+            } catch {
+                client.emit('error', `Failed to verify password`);
+                return;
+            }
+        }
+
+        await this.channelService.addUserToChannel(user.id, channel.id);
 
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});

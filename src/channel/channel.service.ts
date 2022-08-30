@@ -1,4 +1,4 @@
-import {forwardRef, Inject, Injectable} from '@nestjs/common';
+import {Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {plainToClass} from 'class-transformer';
 import {failureMResponse, MResponse, successMResponse} from 'lib/MResponse';
@@ -7,10 +7,10 @@ import {ChannelDto} from './dto/channel.dto';
 import {AddMessageEntityDto} from './dto/message.dto';
 import {ChannelEntity} from './entities/channel.entity';
 import {MessageEntity} from './entities/message.entity';
-import {Request} from 'express';
 import {SendUserDto} from 'src/users/dto/user.dto';
 import {UsersService} from 'src/users/users.service';
 import {UserEntity} from "../users/entities/user.entity";
+import * as argon2 from "argon2";
 
 @Injectable()
 export class ChannelService {
@@ -51,7 +51,7 @@ export class ChannelService {
         channelName: string,
         password: string,
         isPrivate: boolean
-    ): Promise<ChannelDto> {
+    ): Promise<ChannelDto> | undefined {
 
         const user = await this.userService.getUserById(userId);
         if (!user)
@@ -65,6 +65,15 @@ export class ChannelService {
         });
         if (channel)
             return undefined;
+
+        if (password != "" && isPrivate) {
+            try {
+                password = await argon2.hash(password);
+            } catch (e) {
+                console.warn(e);
+                return undefined;
+            }
+        }
 
         // create channel in DB
         const newChannel = await this.channelRepository.create({
@@ -221,5 +230,14 @@ export class ChannelService {
         await this.channelRepository.save(channel);
 
         return newMessage;
+    }
+
+    async getChannelByName(channelName: string, relations: string[] = []) {
+        return this.channelRepository.findOne({
+            where: {
+                name: channelName,
+            },
+            relations
+        });
     }
 }
