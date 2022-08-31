@@ -14,11 +14,6 @@ export class ChannelEntity {
     })
     name: string;
 
-    // // @JoinColumn()
-    // @ManyToOne( () => UserEntity )
-    // owner: UserEntity;
-
-    // TODO: A voir avec Remi
     @Column()
     ownerId: number;
 
@@ -31,19 +26,18 @@ export class ChannelEntity {
         default: ""
     })
     password: string;
+    
+    @JoinTable()
+    @ManyToMany(() => UserEntity, (user) => user.channels)
+    users: UserEntity[];
+    
+    @JoinTable()
+    @ManyToMany(() => UserEntity)
+    admins: UserEntity[];
 
     @JoinTable()
     @ManyToMany(() => BannedEntity, {cascade: true})
     banned: BannedEntity[]
-
-    // TODO: cascade ?
-    @JoinTable()
-    @ManyToMany(() => UserEntity, (user) => user.channels)
-    users: UserEntity[];
-
-    @JoinTable()
-    @ManyToMany(() => UserEntity)
-    admins: UserEntity[];
 
     @OneToMany(() => MessageEntity, message => message.channel, {cascade: true})
     messages: MessageEntity[];

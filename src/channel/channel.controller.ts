@@ -7,6 +7,7 @@ import {AddMessageEntityDto} from './dto/message.dto';
 import {MessageEntity} from './entities/message.entity';
 import {Request} from 'express';
 import {SendUserDto} from 'src/users/dto/user.dto';
+import { BannedEntity } from './entities/banned.entity';
 
 @UseGuards(UserTokenGuard)
 @Controller('channels')
@@ -42,41 +43,86 @@ export class ChannelController {
         return successMResponse(r);
     }
 
-    @Delete()
+    @Delete(':id')
     async deleteChannel(
         @Req() req: Request,
-        @Body('channelId', ParseIntPipe) channelId: number
+        @Param('id', ParseIntPipe) channelId: number
     ): Promise<MResponse<ChannelDto>> {
         return await this.channelService.deleteChannel(req.user.id, channelId);
     }
 
-    @Get('users')
+    @Get(':id/users')
     async getUsers(
-        @Body('channelId', ParseIntPipe) channelId: number
+        @Param('id', ParseIntPipe) channelId: number
     ): Promise<MResponse<SendUserDto[]>> {
         return this.channelService.getUsers(channelId);
     }
 
-    @Post('users')
+    @Post(':id/users')
     async addUserToChannel(
         @Req() req: Request,
-        @Body('channelId', ParseIntPipe) channelId: number
+        @Param('id', ParseIntPipe) channelId: number
     ): Promise<MResponse<ChannelDto>> {
         return this.channelService.addUserToChannel(req.user.id, channelId);
     }
 
-    @Delete('users')
+    @Delete(':id/users')
     async deleteUserFromChannel(
         @Req() req: Request,
-        @Body('channelId', ParseIntPipe) channelId: number,
+        @Param('id', ParseIntPipe) channelId: number,
         @Body('userId', ParseIntPipe) targetId: number,
     ): Promise<MResponse<SendUserDto>> {
         return this.channelService.deleteUserFromChannel(req.user, channelId, targetId);
     }
 
-    @Get('admins')
-    async getAdmins() {
-        //TODO
+    @Get(':id/admins')
+    async getAdmins(
+        @Param('id', ParseIntPipe) channelId: number
+    ): Promise<SendUserDto[]> {
+        return await this.channelService.getChannelAdmins(channelId);
+    }
+
+    @Post(':id/admins')
+    async addChannelAdmin(
+        @Req() req: Request,
+        @Param('id', ParseIntPipe) channelId: number,
+        @Body('targetId', ParseIntPipe) targetId: number
+    ): Promise<boolean> {
+        return await this.channelService.addChannelAdmin(channelId, targetId);
+    }
+
+    @Delete(':id/admins')
+    async removeChannelAdmin(
+        @Req() req: Request,
+        @Param('id', ParseIntPipe) channelId: number,
+        @Body('targetId', ParseIntPipe) targetId: number
+    ): Promise<boolean> {
+        return this.channelService.removeChannelAdmin(channelId, targetId);
+    }
+
+    //
+    @Get(':id/banned')
+    async getBanned(
+        @Param('id', ParseIntPipe) channelId: number
+    ): Promise<BannedEntity[]> {
+        return await this.channelService.getChannelBanned(channelId);
+    }
+
+    @Post(':id/banned')
+    async addChannelBanned(
+        @Param('id', ParseIntPipe) channelId: number,
+        @Body('targetId', ParseIntPipe) targetId: number,
+        @Body('duration', ParseIntPipe) time: number
+    ): Promise<boolean> {
+        return await this.channelService.addChannelBan(channelId, targetId, time);
+    }
+
+    @Delete(':id/banned')
+    async removeChannelBanned(
+        @Param('id', ParseIntPipe) channelId: number,
+        @Body('targetId', ParseIntPipe) targetId: number
+    ): Promise<boolean> {
+        return this.channelService.removeChannelBan(channelId, targetId);
     }
 
     @Get(':id/messages')

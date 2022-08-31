@@ -8,8 +8,8 @@ export class BannedEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToMany(() => UserEntity)
-    user: UserEntity;
+    @Column()
+    userId: number;
 
     @ManyToMany(() => ChannelEntity, channel => channel.banned)
     channel: ChannelEntity;

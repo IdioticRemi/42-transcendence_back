@@ -11,6 +11,7 @@ import {SendUserDto} from 'src/users/dto/user.dto';
 import {UsersService} from 'src/users/users.service';
 import {UserEntity} from "../users/entities/user.entity";
 import * as argon2 from "argon2";
+import { BannedEntity } from './entities/banned.entity';
 
 @Injectable()
 export class ChannelService {
@@ -19,6 +20,8 @@ export class ChannelService {
         private channelRepository: Repository<ChannelEntity>,
         @InjectRepository(MessageEntity)
         private messageRepository: Repository<MessageEntity>,
+        @InjectRepository(BannedEntity)
+        private bannedRepository: Repository<BannedEntity>,
         private userService: UsersService
     ) {
     }
@@ -37,10 +40,19 @@ export class ChannelService {
             })
     }
 
-    async getChannelById(channelId: number, relations: string[] = []): Promise<ChannelDto | undefined> {
-        return this.channelRepository.findOne({
+    async getChannelById(channelId: number, relations: string[] = []): Promise<ChannelEntity | undefined> {
+        return await this.channelRepository.findOne({
             where: {
                 id: channelId,
+            },
+            relations
+        });
+    }
+
+    async getChannelByName(channelName: string, relations: string[] = []): Promise<ChannelEntity | undefined> {
+        return await this.channelRepository.findOne({
+            where: {
+                name: channelName,
             },
             relations
         });
@@ -232,12 +244,113 @@ export class ChannelService {
         return newMessage;
     }
 
-    async getChannelByName(channelName: string, relations: string[] = []) {
-        return this.channelRepository.findOne({
-            where: {
-                name: channelName,
-            },
-            relations
-        });
+    async getChannelAdmins(channelId: number): Promise<SendUserDto[] | undefined> {
+        const channel = await this.getChannelById(channelId, ['admins']);
+        if (!channel)
+            return undefined;
+
+        return channel.admins.map((admin) => plainToClass(SendUserDto, admin, {excludeExtraneousValues: true}));
+    }
+
+    //TODO: MResponse ?
+    async addChannelAdmin(channelId: number, userId: number): Promise<boolean> {
+
+        const channel = await this.getChannelById(channelId, ['admins']);
+        if (!channel)
+            return false;
+
+        const user = await this.userService.getUserById(userId);
+        if (!user)
+            return false;
+
+        channel.admins.push(user);
+        await this.channelRepository.save(channel)
+            .then(() => { return true })
+            .catch(() => { return false })
+
+    }
+
+    //TODO: MResponse ?
+    async removeChannelAdmin(channelId: number, userId: number): Promise<boolean> {
+
+        const channel = await this.getChannelById(channelId, ['admins']);
+        if (!channel)
+            return false;
+
+        const user = await this.userService.getUserById(userId);
+        if (!user)
+            return false;
+
+        if (!channel.admins.find((a) => a.id === user.id))
+            return false;
+
+        channel.admins = channel.admins.filter((a) => a.id !== user.id);
+        await this.channelRepository.save(channel)
+            .then(() => { return true })
+            .catch(() => { return false })
+
+    }
+
+    async getChannelBanned(channelId: number): Promise<BannedEntity[] | undefined> {
+        const channel = await this.getChannelById(channelId, ['banned']);
+        if (!channel)
+            return undefined;
+        console.debug('hello')
+        return channel.banned;
+    }
+
+    //TODO: MResponse ?
+    async addChannelBan(channelId: number, userId: number, minutes: number): Promise<boolean> {
+
+        const channel = await this.getChannelById(channelId, ['banned']);
+        if (!channel)
+            return false;
+
+        const user = await this.userService.getUserById(userId);
+        if (!user)
+            return false;
+
+        // TODO: addition ban time
+        if (channel.banned.find(b => b.userId === user.id))
+            return false;
+
+        const endBan = new Date(Date.now() + minutes * 60 * 1000);
+
+        const bannedUser = this.bannedRepository.create({userId: user.id, channel: channel, end: endBan});
+        if (!bannedUser) {
+            console.debug(channelId, userId, minutes, endBan);
+            return false;
+        }
+        console.debug(bannedUser);
+        console.debug(`user banned until ${endBan}`);
+
+        channel.banned.push(bannedUser);
+        
+        await this.channelRepository.save(channel)
+            .then(() => { return true })
+            .catch(() => { return false })
+    }
+
+
+    //TODO: MResponse ?
+    async removeChannelBan(channelId: number, userId: number): Promise<boolean> {
+
+        const channel = await this.getChannelById(channelId, ['banned']);
+        if (!channel)
+            return false;
+
+        const user = await this.userService.getUserById(userId);
+        if (!user)
+            return false;
+
+        if (!channel.banned.find((b) => b.userId === user.id))
+            return false;
+
+        channel.banned = channel.banned.filter((b) => b.userId !== user.id);
+        
+        await this.channelRepository.save(channel)
+            .then(() => { return true })
+            .catch(() => { return false })
+
     }
 }
