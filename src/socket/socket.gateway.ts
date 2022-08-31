@@ -80,11 +80,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user) return;
+        if (!user) {
+            client.emit('error', 'Invalid user');
+            return;
+        }
 
         const userChannels = await this.userService.getSubscribedChannels(user.id, ['messages', 'users', 'admins']);
 
-        if (!userChannels) return;
+        if (!userChannels) {
+            client.emit('error', 'database error');
+            return;
+        }
 
         userChannels.forEach((c) => {
             client.join(`channel_${c.id}`);
@@ -99,7 +105,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) return;
+        if (!user || !data.channelId) {
+            client.emit('error', 'Invalid data');
+            return;
+        }
 
         const userChannels = await this.userService.getSubscribedChannels(user.id, [
             'admins',
@@ -107,47 +116,62 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             'messages'
         ]);
 
-        if (!userChannels) return;
+        if (!userChannels) {
+            client.emit('error', 'database error');
+            return;
+        }
 
         const channel = userChannels.find(c => c.id === data.channelId);
 
-        if (!channel) return;
+        if (!channel) {
+            client.emit('error', 'Invalid channel');
+            return;
+        }
 
         client.emit('channel_info', channel);
     }
 
-    @SubscribeMessage('channel_subscribe')
-    async subscribeToChannel(
-        @MessageBody() data: { channelId: number },
-        @ConnectedSocket() client: Socket,
-    ) {
-        const user = this.socketService.getConnectedUser(client.id);
+    // TODO: voir avec Remi si vraiment utilisé
+    // @SubscribeMessage('channel_subscribe')
+    // async subscribeToChannel(
+    //     @MessageBody() data: { channelId: number },
+    //     @ConnectedSocket() client: Socket,
+    // ) {
+    //     const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) return;
+    //     if (!user || !data.channelId) {
+    //         client.emit('error', 'Invalid data');
+    //         return;
+    //     }
 
-        const channel = await this.channelService.getChannelById(data.channelId, [
-            'users',
-        ]);
+    //     const channel = await this.channelService.getChannelById(data.channelId, [
+    //         'users',
+    //     ]);
 
-        if (!channel || !channel.users.find(u => u.id)) return;
+    //     if (!channel || channel.users.find(u => u.id)) {
+    //         client.emit('error', 'Invalid channel or User already on channel');
+    //         return;
+    //     }
 
-        console.log(data.channelId);
+    //     client.join(`channel_${channel.id}`);
+    //     this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+    // }
 
-        client.join(`channel_${channel.id}`);
-        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
-    }
+    // TODO: voir avec Remi si vraiment utilisé
+    // @SubscribeMessage('channel_unsubscribe')
+    // async unsubscribeFromChannel(
+    //     @MessageBody() data: { channelId: number },
+    //     @ConnectedSocket() client: Socket,
+    // ) {
+    //     const user = this.socketService.getConnectedUser(client.id);
 
-    @SubscribeMessage('channel_unsubscribe')
-    async unsubscribeFromChannel(
-        @MessageBody() data: { channelId: number },
-        @ConnectedSocket() client: Socket,
-    ) {
-        const user = this.socketService.getConnectedUser(client.id);
+    //     if (!user || !data.channelId) {
+    //         client.emit('error', 'Invalid data');
+    //         return;
+    //     }
 
-        if (!user || !data.channelId) return;
-
-        client.leave(`channel_${data.channelId}`);
-    }
+    //     client.leave(`channel_${data.channelId}`);
+    // }
 
     @SubscribeMessage('channel_create')
     async createChannel(
@@ -180,7 +204,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             'messages'
         ]);
 
-        if (!channel) return;
+        if (!channel) {
+            client.emit('error', 'Invalid channel');
+            return;
+        }
 
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
@@ -194,7 +221,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) return;
+        if (!user || !data.channelId) {
+            client.emit('error', 'Invalid data');
+            return;
+        }
 
         await this.channelService.addUserToChannel(user.id, data.channelId);
 
@@ -204,8 +234,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             'messages'
         ]);
 
-        if (!channel) return;
-
+        if (!channel) {
+            client.emit('error', 'Invalid channel');
+            return;
+        }
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
@@ -261,15 +293,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = await this.socketService.getConnectedUser(client.id);
 
-        console.log("Attempt to delete a channel: ", data.channelId);
-
-        if (!user || !data.channelId) return;
+        if (!user || !data.channelId) {
+            client.emit('error', 'Invalid data');
+            return;
+        }
 
         const channel = await this.channelService.getChannelById(data.channelId, [
             'admins'
         ]);
 
-        if (!channel || (channel.ownerId != user.id && !channel.admins.find(u => u.id === user.id))) return;
+        if (!channel) {
+            client.emit('error', 'Invalid channel');
+            return;
+        }
+
+        if (channel.ownerId != user.id && !channel.admins.find(u => u.id === user.id)) {
+            client.emit('error', 'You must be admin to perform this action');
+            return;
+        }
 
         await this.channelService.deleteChannel(user.id, channel.id);
 
@@ -284,7 +325,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = await this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) return;
+        if (!user || !data.channelId) {
+            client.emit('error', 'Invalid data');
+            return;
+        }
 
         await this.channelService.deleteUserFromChannel(user, data.channelId, user.id);
 
@@ -295,7 +339,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             'messages'
         ]);
 
-        if (!channel) return;
+        if (!channel) {
+            client.emit('error', 'Invalid channel');
+            return;
+        }
 
         client.leave(`channel_${channel.id}`);
         client.emit('channel_leave', {channelId: channel.id});
@@ -309,14 +356,20 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = await this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId || !data.content || /^\s*$/.test(data.content)) return;
+        if (!user || !data.channelId || !data.content || /^\s*$/.test(data.content)) {
+            //TODO: voir avec Remi si display de message d'erreur pour les messages vides
+            // client.emit('error', `Invalid data or empty message`);
+            return;
+        }
 
         const channel = await this.channelService.getChannelById(data.channelId, [
             'users',
         ]);
 
-        if (!channel) return;
-
+        if (!channel) {
+            client.emit('error', 'Invalid channel');
+            return;
+        }
         const message = await this.channelService.addMessage(
             channel.id,
             plainToClass(AddMessageEntityDto, {
@@ -327,8 +380,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }),
         );
 
-        if (!message) return;
-
+        if (!message) {
+            client.emit('error', 'Message could not be sent to channel');
+            return;
+        }
         this.server.to(`channel_${channel.id}`).emit('channel_message', {
             channelId: channel.id,
             userId: user.id,
