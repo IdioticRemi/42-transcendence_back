@@ -1,11 +1,11 @@
 import {
-  ConnectedSocket,
-  MessageBody,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  SubscribeMessage,
-  WebSocketGateway,
-  WebSocketServer,
+    ConnectedSocket,
+    MessageBody,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    SubscribeMessage,
+    WebSocketGateway,
+    WebSocketServer,
 } from '@nestjs/websockets';
 import {plainToClass} from 'class-transformer';
 import {Server, Socket} from 'socket.io';
@@ -14,6 +14,7 @@ import {AddMessageEntityDto} from 'src/channel/dto/message.dto';
 import {UsersService} from 'src/users/users.service';
 import {SocketService} from './socket.service';
 import * as argon2 from "argon2";
+import {SanctionType} from "../channel/entities/sanction.entity";
 
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -25,6 +26,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private userService: UsersService,
         private socketService: SocketService,
     ) {
+        setInterval(async () => {
+            await this.channelService.refreshSanctions();
+        }, 10 * 1e3);
     }
 
     async handleConnection(client: Socket) {
@@ -42,8 +46,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.disconnect();
             return;
         }
+
         this.socketService.connectUser(client.id, user);
-        client.join(`prv_${user.id}`);
 
         user.friends.forEach(f => {
             const friend = this.socketService.getUserKVByUserId(f.id);
@@ -109,7 +113,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) {
+        if (!user || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -132,48 +136,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.emit('channel_info', channel);
     }
-
-    // TODO: voir avec Remi si vraiment utilisé
-    // @SubscribeMessage('channel_subscribe')
-    // async subscribeToChannel(
-    //     @MessageBody() data: { channelId: number },
-    //     @ConnectedSocket() client: Socket,
-    // ) {
-    //     const user = this.socketService.getConnectedUser(client.id);
-
-    //     if (!user || !data.channelId) {
-    //         client.emit('error', 'Invalid data');
-    //         return;
-    //     }
-
-    //     const channel = await this.channelService.getChannelById(data.channelId, [
-    //         'users',
-    //     ]);
-
-    //     if (!channel || channel.users.find(u => u.id)) {
-    //         client.emit('error', 'Invalid channel or User already on channel');
-    //         return;
-    //     }
-
-    //     client.join(`channel_${channel.id}`);
-    //     this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
-    // }
-
-    // TODO: voir avec Remi si vraiment utilisé
-    // @SubscribeMessage('channel_unsubscribe')
-    // async unsubscribeFromChannel(
-    //     @MessageBody() data: { channelId: number },
-    //     @ConnectedSocket() client: Socket,
-    // ) {
-    //     const user = this.socketService.getConnectedUser(client.id);
-
-    //     if (!user || !data.channelId) {
-    //         client.emit('error', 'Invalid data');
-    //         return;
-    //     }
-
-    //     client.leave(`channel_${data.channelId}`);
-    // }
 
     @SubscribeMessage('channel_create')
     async createChannel(
@@ -221,7 +183,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) {
+        if (!user || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -310,6 +272,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const owner = channel.users.find(u => u.id === channel.ownerId);
 
         users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+        users.push({ id: user.id, nickname: user.nickname, perm: 0 });
 
         channel.users.forEach((u) => {
             const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
@@ -337,7 +300,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = await this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) {
+        if (!user || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -369,12 +332,23 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage('channel_leave')
     async leaveChannel(
-        @MessageBody() data: { channelId: number },
-        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { channelId: number, userId?: number },
+        @ConnectedSocket() client: Socket | null,
     ) {
-        const user = await this.socketService.getConnectedUser(client.id);
+        let user = null;
+        if (!client) {
+            const tmp = this.socketService.getUserKVByUserId(data.userId);
+            if (!tmp)
+                return;
+            client = this.server.sockets.sockets.get(tmp[0]);
+            if (!client)
+                return;
+            user = tmp[1];
+        } else {
+            user = await this.socketService.getConnectedUser(client.id);
+        }
 
-        if (!user || !data.channelId) {
+        if (!user || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -433,7 +407,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = await this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId || !data.content || /^\s*$/.test(data.content)) {
+        if (!user || !('channelId' in data) || !data.content || /^\s*$/.test(data.content)) {
             client.emit('error', `Invalid data or empty message`);
             return;
         }
@@ -619,7 +593,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         const userData = await this.userService.getUserById(user.id, ['friends']);
 
-        if (!user || !userData || !data.userId) {
+        if (!user || !userData || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -657,7 +631,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         const userData = await this.userService.getUserById(user.id);
 
-        if (!user || !userData || !data.userId) {
+        if (!user || !userData || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -715,7 +689,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) {
+        if (!user || !('channelId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -757,7 +731,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) {
+        if (!user || !('channelId' in data) || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -813,7 +787,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelId) {
+        if (!user || !('channelId' in data) || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -860,5 +834,105 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         users.find(u => u.id === data.userId).perm = 0;
 
         this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
+    }
+
+    @SubscribeMessage("channel_sanctions")
+    async getChannelSanctions(
+        @MessageBody() data: { channelId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !('channelId' in data)) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
+
+        const channel = await this.channelService.getChannelById(data.channelId, ['users']);
+
+        if (!channel) {
+            client.emit('error', `Invalid channelId`);
+            return;
+        }
+
+        if (!channel.users.find(u => u.id === user.id)) {
+            client.emit('error', `You are not a member of this channel`);
+            return;
+        }
+
+        const users: { muted: boolean, banned: boolean, id: number, nickname: string }[] = [];
+
+        const sanctions = await this.channelService.getChannelSanctions(channel.id);
+
+        for (const s of sanctions) {
+            const sanctionUser = await this.userService.getUserById(s.userId);
+            const usr = users.find(u => u.id === s.userId);
+
+            if (!usr) {
+                users.push({ muted: s.type === SanctionType.MUTE, banned: s.type === SanctionType.BAN, id: sanctionUser.id, nickname: sanctionUser.nickname });
+            } else {
+                usr.banned = true;
+                usr.muted = true;
+            }
+        }
+
+        client.emit("channel_sanctions", { channelId: channel.id, users });
+    }
+
+    @SubscribeMessage("channel_add_sanction")
+    async addChannelSanction(
+        @MessageBody() data: { userId: number, channelId: number, sanction: SanctionType, duration: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        console.log(data);
+        if (!user || !('channelId' in data) || !('userId' in data) || !data.sanction || !data.duration) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
+
+        const channel = await this.channelService.getChannelById(data.channelId, ['users']);
+
+        if (!channel) {
+            client.emit('error', `Invalid channelId`);
+            return;
+        }
+
+        if (!channel.users.find(u => u.id === user.id)) {
+            client.emit('error', `You are not a member of this channel`);
+            return;
+        }
+
+        if (!channel.users.find(u => u.id === data.userId)) {
+            client.emit('error', `You are not a member of this channel`);
+            return;
+        }
+
+        const r = await this.channelService.addChannelSanction(channel.id, user.id, data.userId, data.sanction, data.duration);
+        if (r.status === "error") {
+            client.emit("error", r.message);
+            return;
+        }
+
+        const users: { muted: boolean, banned: boolean, id: number, nickname: string }[] = [];
+
+        const sanctions = await this.channelService.getChannelSanctions(channel.id);
+
+        for (const s of sanctions) {
+            const sanctionUser = await this.userService.getUserById(s.userId);
+            const usr = users.find(u => u.id === s.userId);
+
+            if (!usr) {
+                users.push({ muted: s.type === SanctionType.MUTE, banned: s.type === SanctionType.BAN, id: sanctionUser.id, nickname: sanctionUser.nickname });
+            } else {
+                usr.banned = true;
+                usr.muted = true;
+            }
+        }
+
+        this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users });
+        if (data.sanction === SanctionType.BAN)
+            await this.leaveChannel({ channelId: channel.id, userId: data.userId }, null);
     }
 }

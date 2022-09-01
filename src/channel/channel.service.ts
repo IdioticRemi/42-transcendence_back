@@ -11,7 +11,7 @@ import {SendUserDto} from 'src/users/dto/user.dto';
 import {UsersService} from 'src/users/users.service';
 import {UserEntity} from "../users/entities/user.entity";
 import * as argon2 from "argon2";
-import { BannedEntity } from './entities/banned.entity';
+import {SanctionEntity, SanctionType} from './entities/sanction.entity';
 
 @Injectable()
 export class ChannelService {
@@ -20,8 +20,8 @@ export class ChannelService {
         private channelRepository: Repository<ChannelEntity>,
         @InjectRepository(MessageEntity)
         private messageRepository: Repository<MessageEntity>,
-        @InjectRepository(BannedEntity)
-        private bannedRepository: Repository<BannedEntity>,
+        @InjectRepository(SanctionEntity)
+        private sanctionRepository: Repository<SanctionEntity>,
         private userService: UsersService
     ) {
     }
@@ -309,48 +309,65 @@ export class ChannelService {
 
     }
 
-    async getChannelBanned(channelId: number): Promise<BannedEntity[] | undefined> {
-        const channel = await this.getChannelById(channelId, ['banned']);
+    async getChannelSanctions(channelId: number): Promise<SanctionEntity[] | undefined> {
+        const channel = await this.getChannelById(channelId, ['sanctions']);
         if (!channel)
             return undefined;
-        return channel.banned;
+        return channel.sanctions;
     }
 
-    //TODO: MResponse ?
-    async addChannelBan(channelId: number, userId: number, minutes: number): Promise<boolean> {
+    async addChannelSanction(channelId: number, userId: number, targetId: number, sanction: SanctionType, minutes: number): Promise<MResponse<boolean>> {
 
-        const channel = await this.getChannelById(channelId, ['banned']);
+        const channel = await this.getChannelById(channelId, ['admins', 'sanctions']);
         if (!channel)
-            return false;
+            return failureMResponse("invalid channel");
 
         const user = await this.userService.getUserById(userId);
         if (!user)
-            return false;
+            return failureMResponse("invalid user");
+
+        const target = await this.userService.getUserById(targetId);
+        if (!target)
+            return failureMResponse("invalid target");
+
+        if (!channel.admins.find(a => a.id === user.id))
+            return failureMResponse("insufficient permissions");
+
+        if (target.id === channel.ownerId)
+            return failureMResponse("insufficient permissions");
+
+        if (channel.admins.find(a => a.id === target.id) && !(channel.ownerId === userId))
+            return failureMResponse("insufficient permissions");
+
+
 
         // TODO: addition ban time
-        if (channel.banned.find(b => b.userId === user.id))
-            return false;
+        const previousSanction = channel.sanctions.find(s => s.userId === target.id && s.type === sanction);
+        const endSanction = new Date(Date.now() + minutes * 60 * 1000);
 
-        const endBan = new Date(Date.now() + minutes * 60 * 1000);
-
-        const bannedUser = this.bannedRepository.create({userId: user.id, channel: channel, end: endBan});
-        if (!bannedUser) {
-            return false;
+        if (previousSanction) {
+            if (endSanction.getTime() > previousSanction.end.getTime()) {
+                channel.sanctions = channel.sanctions.filter(s => s.id !== previousSanction.id);
+            } else return successMResponse(true);
         }
-        console.debug(`user banned until ${endBan}`);
 
-        channel.banned.push(bannedUser);
+        const newSanction = this.sanctionRepository.create({userId: target.id, type: sanction, channel: channel, end: endSanction});
+        if (!newSanction) {
+            return failureMResponse("database error");
+        }
+        console.debug(`user ${sanction}-ed until ${endSanction}`);
+
+        channel.sanctions.push(newSanction);
         
         return this.channelRepository.save(channel)
-            .then(() => { return true })
-            .catch(() => { return false })
+            .then(() => { return successMResponse(true) })
+            .catch(() => { return failureMResponse("database error"); })
     }
-
 
     //TODO: MResponse ?
     async removeChannelBan(channelId: number, userId: number): Promise<boolean> {
 
-        const channel = await this.getChannelById(channelId, ['banned']);
+        const channel = await this.getChannelById(channelId, ['sanctions']);
         if (!channel)
             return false;
 
@@ -358,14 +375,28 @@ export class ChannelService {
         if (!user)
             return false;
 
-        if (!channel.banned.find((b) => b.userId === user.id))
+        if (!channel.sanctions.find((b) => b.userId === user.id))
             return false;
 
-        channel.banned = channel.banned.filter((b) => b.userId !== user.id);
+        channel.sanctions = channel.sanctions.filter((b) => b.userId !== user.id);
         
         return this.channelRepository.save(channel)
             .then(() => { return true })
             .catch(() => { return false })
 
+    }
+
+    async refreshSanctions() {
+        const allSanctions = await this.sanctionRepository.find();
+        const currentTime = new Date();
+        const toDelete: SanctionEntity[] = [];
+
+        allSanctions.forEach((sanction) => {
+            if (currentTime.getTime() >= sanction.end.getTime())
+                toDelete.push(sanction);
+        });
+
+        if (toDelete.length)
+            await this.sanctionRepository.delete(toDelete.map(s => s.id));
     }
 }

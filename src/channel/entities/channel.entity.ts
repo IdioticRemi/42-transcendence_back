@@ -1,6 +1,6 @@
 import {UserEntity} from "src/users/entities/user.entity";
 import {Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn} from "typeorm";
-import {BannedEntity} from "./banned.entity";
+import {SanctionEntity} from "./sanction.entity";
 import {MessageEntity} from "./message.entity";
 
 @Entity('ChannelEntity')
@@ -36,8 +36,8 @@ export class ChannelEntity {
     admins: UserEntity[];
 
     @JoinTable()
-    @ManyToMany(() => BannedEntity, {cascade: true})
-    banned: BannedEntity[]
+    @ManyToMany(() => SanctionEntity, {cascade: true})
+    sanctions: SanctionEntity[]
 
     @OneToMany(() => MessageEntity, message => message.channel, {cascade: true})
     messages: MessageEntity[];

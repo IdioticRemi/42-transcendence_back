@@ -1,7 +1,7 @@
 import {Expose} from "class-transformer";
 import {UserEntity} from "src/users/entities/user.entity";
 import {MessageEntity} from "../entities/message.entity";
-import {BannedEntity} from "../entities/banned.entity";
+import {SanctionEntity} from "../entities/sanction.entity";
 
 export class ChannelDto {
 
@@ -24,7 +24,7 @@ export class ChannelDto {
     admins: UserEntity[];
 
     @Expose()
-    banned: BannedEntity[];
+    banned: SanctionEntity[];
 
     @Expose()
     messages: MessageEntity[];
