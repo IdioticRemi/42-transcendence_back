@@ -98,6 +98,7 @@ export class ChannelService {
             return undefined;
 
         newChannel.users = [user];
+        newChannel.admins = [user];
 
         return this.channelRepository.save(newChannel)
             .then((newChannel) => {
@@ -180,7 +181,7 @@ export class ChannelService {
             });
     }
 
-    async deleteUserFromChannel(user: UserEntity, channelId: number, targetId: number): Promise<MResponse<SendUserDto>> {
+    async deleteUserFromChannel(user: UserEntity, channelId: number, targetId: number): Promise<MResponse<boolean>> {
 
         const target = await this.userService.getUserById(targetId);
         if (!target)
@@ -195,13 +196,33 @@ export class ChannelService {
         if (!channel)
             return failureMResponse("this channel does not exist");
 
-        if (target.id != user.id && channel.ownerId != user.id && !channel.admins.find((u) => u.id === user.id))
-            return failureMResponse("user has not enough privilege to delete target");
+        if (target.id !== user.id && !channel.admins.find((u) => u.id === user.id))
+            return failureMResponse("missing privilleges to ban this user");
+        if (target.id !== user.id && channel.ownerId === target.id)
+            return failureMResponse("missing privilleges to ban this user");
 
-        channel.users = channel.users.filter(u => u.id != target.id);
+        // inherit ownership and delete channel if empty
+        if (channel.users.length === 1) {
+            await this.deleteChannel(channel.ownerId, channel.id);
+            return successMResponse(true);
+        }
+
+        channel.users = channel.users.filter(u => u.id !== target.id);
+        channel.admins = channel.admins.filter(u => u.id !== target.id);
+
+        if (target.id === channel.ownerId) {
+            if (channel.admins.length > 1) {
+                channel.ownerId = channel.admins[0].id;
+            } else {
+                const newOwner = channel.users[0];
+                channel.ownerId = newOwner.id;
+                channel.admins.push(newOwner);
+            }
+        }
+
         return await this.channelRepository.save(channel)
             .then(() => {
-                return successMResponse(plainToClass(SendUserDto, target, {excludeExtraneousValues: true}));
+                return successMResponse(false);
             })
             .catch(() => {
                 return failureMResponse("database error");
@@ -318,15 +339,13 @@ export class ChannelService {
 
         const bannedUser = this.bannedRepository.create({userId: user.id, channel: channel, end: endBan});
         if (!bannedUser) {
-            console.debug(channelId, userId, minutes, endBan);
             return false;
         }
-        console.debug(bannedUser);
         console.debug(`user banned until ${endBan}`);
 
         channel.banned.push(bannedUser);
         
-        await this.channelRepository.save(channel)
+        return this.channelRepository.save(channel)
             .then(() => { return true })
             .catch(() => { return false })
     }
@@ -348,7 +367,7 @@ export class ChannelService {
 
         channel.banned = channel.banned.filter((b) => b.userId !== user.id);
         
-        await this.channelRepository.save(channel)
+        return this.channelRepository.save(channel)
             .then(() => { return true })
             .catch(() => { return false })
 

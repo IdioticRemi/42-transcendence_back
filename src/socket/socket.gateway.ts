@@ -330,17 +330,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        await this.channelService.deleteUserFromChannel(user, data.channelId, user.id);
+        const r = await this.channelService.deleteUserFromChannel(user, data.channelId, user.id);
 
-        console.log("leave channel");
+        if (r.status === "error") {
+            client.emit(r.message);
+            return;
+        }
+        if (r.status === "success" && r.payload === true) {
+            client.leave(`channel_${data.channelId}`);
+            client.emit('channel_leave', {channelId: data.channelId});
+            return;
+        }
+
         const channel = await this.channelService.getChannelById(data.channelId, [
-            'admins',
-            'users',
             'messages'
         ]);
 
         if (!channel) {
-            client.emit('error', 'Invalid channel');
+            client.emit('error', 'failed to fetch channel information');
             return;
         }
 
@@ -357,8 +364,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = await this.socketService.getConnectedUser(client.id);
 
         if (!user || !data.channelId || !data.content || /^\s*$/.test(data.content)) {
-            //TODO: voir avec Remi si display de message d'erreur pour les messages vides
-            // client.emit('error', `Invalid data or empty message`);
+            client.emit('error', `Invalid data or empty message`);
             return;
         }
 

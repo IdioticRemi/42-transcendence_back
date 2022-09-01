@@ -71,7 +71,7 @@ export class ChannelController {
         @Req() req: Request,
         @Param('id', ParseIntPipe) channelId: number,
         @Body('userId', ParseIntPipe) targetId: number,
-    ): Promise<MResponse<SendUserDto>> {
+    ): Promise<MResponse<boolean>> {
         return this.channelService.deleteUserFromChannel(req.user, channelId, targetId);
     }
 
