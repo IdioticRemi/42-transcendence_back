@@ -35,7 +35,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const user = await this.userService.getUserByToken(
-            client.handshake.headers.authorization, ['friends', 'blocked']
+            client.handshake.headers.authorization, ['friends', 'blocked', 'channels']
         );
 
         if (!user) {
@@ -56,6 +56,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         user.blocked.forEach(b => {
             client.emit('user_block', { userId: b.id, userNick: b.nickname })
         });
+
+        user.channels.forEach(c => {
+            client.join(`channel_${c.id}`);
+        })
     }
 
     async handleDisconnect(client: Socket) {
@@ -85,7 +89,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const userChannels = await this.userService.getSubscribedChannels(user.id, ['messages', 'users', 'admins']);
+        const userChannels = await this.userService.getSubscribedChannels(user.id, ['messages']);
 
         if (!userChannels) {
             client.emit('error', 'database error');
@@ -111,8 +115,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const userChannels = await this.userService.getSubscribedChannels(user.id, [
-            'admins',
-            'users',
             'messages'
         ]);
 
@@ -199,8 +201,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const id = ret.id;
 
         const channel = await this.channelService.getChannelById(id, [
-            'admins',
-            'users',
             'messages'
         ]);
 
@@ -229,18 +229,38 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await this.channelService.addUserToChannel(user.id, data.channelId);
 
         const channel = await this.channelService.getChannelById(data.channelId, [
+            'messages',
             'admins',
-            'users',
-            'messages'
+            'users'
         ]);
 
         if (!channel) {
             client.emit('error', 'Invalid channel');
             return;
         }
+
+        const users = [];
+        const owner = channel.users.find(u => u.id === channel.ownerId);
+
+        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+
+        channel.users.forEach((u) => {
+            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
+
+            if (channel.admins.find(a => a.id === u.id))
+                userObj.perm = 1;
+
+            if (u.id !== owner.id)
+                users.push(userObj);
+        });
+
+        delete channel.users;
+        delete channel.admins;
+
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: data.channelId, users });
     }
 
     @SubscribeMessage('channel_joinprv')
@@ -253,9 +273,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (!user || !data.channelName) return;
 
         const channel = await this.channelService.getChannelByName(data.channelName, [
+            'messages',
             'admins',
-            'users',
-            'messages'
+            'users'
         ]);
 
         if (!channel) {
@@ -279,11 +299,35 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
         }
 
-        await this.channelService.addUserToChannel(user.id, channel.id);
+        const r = await this.channelService.addUserToChannel(user.id, channel.id);
+
+        if (r.status === "error") {
+            client.emit('error', r.message);
+            return;
+        }
+
+        const users = [];
+        const owner = channel.users.find(u => u.id === channel.ownerId);
+
+        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+
+        channel.users.forEach((u) => {
+            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
+
+            if (channel.admins.find(a => a.id === u.id))
+                userObj.perm = 1;
+
+            if (u.id !== owner.id)
+                users.push(userObj);
+        });
+
+        delete channel.users;
+        delete channel.admins;
 
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
     }
 
     @SubscribeMessage('channel_delete')
@@ -312,7 +356,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        await this.channelService.deleteChannel(user.id, channel.id);
+        const r = await this.channelService.deleteChannel(user.id, channel.id);
+
+        if (r.status === "error") {
+            client.emit('error', r.message);
+            return;
+        }
 
         this.server.to(`channel_${channel.id}`).emit('channel_leave', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).socketsLeave(`channel_${channel.id}`);
@@ -343,7 +392,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const channel = await this.channelService.getChannelById(data.channelId, [
-            'messages'
+            'messages',
+            'admins',
+            'users'
         ]);
 
         if (!channel) {
@@ -351,9 +402,28 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
+        const users = [];
+        const owner = channel.users.find(u => u.id === channel.ownerId);
+
+        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+
+        channel.users.forEach((u) => {
+            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
+
+            if (channel.admins.find(a => a.id === u.id))
+                userObj.perm = 1;
+
+            if (u.id !== owner.id)
+                users.push(userObj);
+        });
+
+        delete channel.users;
+        delete channel.admins;
+
         client.leave(`channel_${channel.id}`);
         client.emit('channel_leave', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
     }
 
     @SubscribeMessage('channel_message')
@@ -636,5 +706,159 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.socketService.updateUserNickname(user.id, data.newNick);
 
         client.emit('user_nick', { newNick: data.newNick });
+    }
+
+    @SubscribeMessage('channel_users')
+    async getChannelUserList(
+        @MessageBody() data: { channelId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !data.channelId) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
+
+        const channel = await this.channelService.getChannelById(data.channelId, ['users', 'admins']);
+
+        if (!channel) {
+            client.emit('error', `Invalid channelId`);
+            return;
+        }
+
+        if (!channel.users.find(u => u.id === user.id)) {
+            client.emit('error', `You are not a member of this channel`);
+            return;
+        }
+
+        const users = [];
+        const owner = channel.users.find(u => u.id === channel.ownerId);
+
+        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+
+        channel.users.forEach((u) => {
+            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
+
+            if (channel.admins.find(a => a.id === u.id))
+                userObj.perm = 1;
+
+            if (u.id !== owner.id)
+                users.push(userObj);
+        });
+
+        client.emit("channel_users", { channelId: channel.id, users });
+    }
+
+    @SubscribeMessage('channel_add_admin')
+    async addChannelAdmin(
+        @MessageBody() data: { userId: number, channelId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !data.channelId) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
+
+        const channel = await this.channelService.getChannelById(data.channelId, ['users', 'admins']);
+
+        if (!channel) {
+            client.emit('error', `Invalid channelId`);
+            return;
+        }
+
+        if (!channel.users.find(u => u.id === user.id)) {
+            client.emit('error', `You are not a member of this channel`);
+            return;
+        }
+
+        const users = [];
+        const owner = channel.users.find(u => u.id === channel.ownerId);
+
+        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+
+        channel.users.forEach((u) => {
+            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
+
+            if (channel.admins.find(a => a.id === u.id))
+                userObj.perm = 1;
+
+            if (u.id !== owner.id)
+                users.push(userObj);
+        });
+5
+        if (users.find(u => u.id === user.id)?.perm < users.find(u => u.id === data.userId)) {
+            client.emit('error', `Insufficient permissions`);
+            return;
+        }
+
+        const success = await this.channelService.addChannelAdmin(channel.id, data.userId);
+
+        if (!success) {
+            client.emit('error', `Failed to add channel admin`);
+            return;
+        }
+
+        users.find(u => u.id === data.userId).perm = 1;
+
+        this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
+    }
+
+    @SubscribeMessage('channel_del_admin')
+    async delChannelAdmin(
+        @MessageBody() data: { userId: number, channelId: number },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !data.channelId) {
+            client.emit('error', `Invalid data`);
+            return;
+        }
+
+        const channel = await this.channelService.getChannelById(data.channelId, ['users', 'admins']);
+
+        if (!channel) {
+            client.emit('error', `Invalid channelId`);
+            return;
+        }
+
+        if (!channel.users.find(u => u.id === user.id)) {
+            client.emit('error', `You are not a member of this channel`);
+            return;
+        }
+
+        const users = [];
+        const owner = channel.users.find(u => u.id === channel.ownerId);
+
+        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+
+        channel.users.forEach((u) => {
+            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
+
+            if (channel.admins.find(a => a.id === u.id))
+                userObj.perm = 1;
+
+            if (u.id !== owner.id)
+                users.push(userObj);
+        });
+        5
+        if (users.find(u => u.id === user.id)?.perm > users.find(u => u.id === data.userId)) {
+            client.emit('error', `Insufficient permissions`);
+            return;
+        }
+
+        const success = await this.channelService.removeChannelAdmin(channel.id, data.userId);
+
+        if (!success) {
+            client.emit('error', `Failed to remove channel admin`);
+            return;
+        }
+
+        users.find(u => u.id === data.userId).perm = 0;
+
+        this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
     }
 }

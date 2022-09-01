@@ -273,7 +273,6 @@ export class ChannelService {
         return channel.admins.map((admin) => plainToClass(SendUserDto, admin, {excludeExtraneousValues: true}));
     }
 
-    //TODO: MResponse ?
     async addChannelAdmin(channelId: number, userId: number): Promise<boolean> {
 
         const channel = await this.getChannelById(channelId, ['admins']);
@@ -285,13 +284,11 @@ export class ChannelService {
             return false;
 
         channel.admins.push(user);
-        await this.channelRepository.save(channel)
+        return this.channelRepository.save(channel)
             .then(() => { return true })
             .catch(() => { return false })
-
     }
 
-    //TODO: MResponse ?
     async removeChannelAdmin(channelId: number, userId: number): Promise<boolean> {
 
         const channel = await this.getChannelById(channelId, ['admins']);
@@ -306,7 +303,7 @@ export class ChannelService {
             return false;
 
         channel.admins = channel.admins.filter((a) => a.id !== user.id);
-        await this.channelRepository.save(channel)
+        return this.channelRepository.save(channel)
             .then(() => { return true })
             .catch(() => { return false })
 
@@ -316,7 +313,6 @@ export class ChannelService {
         const channel = await this.getChannelById(channelId, ['banned']);
         if (!channel)
             return undefined;
-        console.debug('hello')
         return channel.banned;
     }
 
