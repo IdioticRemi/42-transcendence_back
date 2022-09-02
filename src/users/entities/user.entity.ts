@@ -46,11 +46,6 @@ export class UserEntity {
     })
     nickname: string;
 
-    @Column({
-        default: UserStatus.OFFLINE
-    })
-    status: number;
-
     @ManyToMany(() => ChannelEntity, (channel) => channel.users)
     channels: ChannelEntity[];
 

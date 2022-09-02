@@ -461,8 +461,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             'friends',
         ]);
 
-        if (!friend || !friend.friends.find(u => u.id === user.id)) {
+        if (!friend  || !friend.friends.find(u => u.id === user.id)) {
             client.emit('error', `This person is not your friend`);
+            return;
+        }
+
+        const userData = await this.userService.getUserById(user.id, [
+            'friends',
+        ]);
+
+        if (!userData  || !userData.friends.find(u => u.id === friend.id)) {
+            client.emit('error', `You are not friend with this person`);
             return;
         }
 
