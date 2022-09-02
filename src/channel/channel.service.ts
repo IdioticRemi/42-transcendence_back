@@ -399,4 +399,24 @@ export class ChannelService {
         if (toDelete.length)
             await this.sanctionRepository.delete(toDelete.map(s => s.id));
     }
+
+    async getChannelSanctionsFormatted(channelId: number) {
+        const users: { muted: boolean, banned: boolean, id: number, nickname: string }[] = [];
+
+        const sanctions = await this.getChannelSanctions(channelId);
+
+        for (const s of sanctions) {
+            const sanctionUser = await this.userService.getUserById(s.userId);
+            const usr = users.find(u => u.id === s.userId);
+
+            if (!usr) {
+                users.push({ muted: s.type === SanctionType.MUTE, banned: s.type === SanctionType.BAN, id: sanctionUser.id, nickname: sanctionUser.nickname });
+            } else {
+                usr.banned = true;
+                usr.muted = true;
+            }
+        }
+
+        return users;
+    }
 }

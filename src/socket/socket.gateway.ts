@@ -144,7 +144,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('private' in data) || !data.name) {
+        if (!user || !('private' in data) || !('name' in data)) {
             client.emit('error', 'cannot create this channel');
             return;
         }
@@ -232,7 +232,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.channelName) return;
+        if (!user || !('channelName' in data)) return;
 
         const channel = await this.channelService.getChannelByName(data.channelName, [
             'messages',
@@ -284,6 +284,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 users.push(userObj);
         });
 
+        const sanctions = await this.channelService.getChannelSanctionsFormatted(channel.id);
+
         delete channel.users;
         delete channel.admins;
 
@@ -291,6 +293,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('channel_join', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
         this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
+        this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
     }
 
     @SubscribeMessage('channel_delete')
@@ -407,7 +410,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = await this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data) || !data.content || /^\s*$/.test(data.content)) {
+        if (!user || !('channelId' in data) || !('content' in data) || /^\s*$/.test(data.content)) {
             client.emit('error', `Invalid data or empty message`);
             return;
         }
@@ -449,7 +452,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.friendId || !data.content || /^\s*$/.test(data.content))  {
+        if (!user || !('friendId' in data) || !('content' in data) || /^\s*$/.test(data.content))  {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -516,7 +519,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.userNick) {
+        if (!user || !('userNick' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -539,12 +542,23 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const friendSocket = this.socketService.getUserKVByUserId(friend.id);
             const isFriendConnected = !!friendSocket;
 
-            if (isFriendConnected)
+            if (isFriendConnected) {
                 this.server.to(friendSocket[0]).emit('friend_info', { id: user.id, nickname: user.nickname, status: 'online', messages: [] });
+                this.server.to(friendSocket[0]).emit('success', `You are now ${user.nickname}'s friend!`);
+            }
 
+            client.emit('success', `You are now ${friend.nickname}'s friend!`);
             client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: isFriendConnected ? 'online' : 'offline', messages: [] });
         }
         else {
+            const friendSocket = this.socketService.getUserKVByUserId(friend.id);
+            const isFriendConnected = !!friendSocket;
+
+            if (isFriendConnected) {
+                this.server.to(friendSocket[0]).emit('warning', `${user.nickname} added you as a friend`);
+            }
+
+            client.emit('success', `Sent friend request to ${user.nickname}`);
             client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: 'pending', messages: [] });
         }
     }
@@ -556,7 +570,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.friendId) {
+        if (!user || !('friendId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -860,23 +874,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users: { muted: boolean, banned: boolean, id: number, nickname: string }[] = [];
+        const sanctions = await this.channelService.getChannelSanctionsFormatted(channel.id);
 
-        const sanctions = await this.channelService.getChannelSanctions(channel.id);
-
-        for (const s of sanctions) {
-            const sanctionUser = await this.userService.getUserById(s.userId);
-            const usr = users.find(u => u.id === s.userId);
-
-            if (!usr) {
-                users.push({ muted: s.type === SanctionType.MUTE, banned: s.type === SanctionType.BAN, id: sanctionUser.id, nickname: sanctionUser.nickname });
-            } else {
-                usr.banned = true;
-                usr.muted = true;
-            }
-        }
-
-        client.emit("channel_sanctions", { channelId: channel.id, users });
+        client.emit("channel_sanctions", { channelId: channel.id, users: sanctions });
     }
 
     @SubscribeMessage("channel_add_sanction")
@@ -915,23 +915,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users: { muted: boolean, banned: boolean, id: number, nickname: string }[] = [];
+        const sanctions = await this.channelService.getChannelSanctionsFormatted(channel.id);
 
-        const sanctions = await this.channelService.getChannelSanctions(channel.id);
-
-        for (const s of sanctions) {
-            const sanctionUser = await this.userService.getUserById(s.userId);
-            const usr = users.find(u => u.id === s.userId);
-
-            if (!usr) {
-                users.push({ muted: s.type === SanctionType.MUTE, banned: s.type === SanctionType.BAN, id: sanctionUser.id, nickname: sanctionUser.nickname });
-            } else {
-                usr.banned = true;
-                usr.muted = true;
-            }
-        }
-
-        this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users });
+        this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
         if (data.sanction === SanctionType.BAN)
             await this.leaveChannel({ channelId: channel.id, userId: data.userId }, null);
     }
