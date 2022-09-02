@@ -158,18 +158,21 @@ export class ChannelService {
             where: {
                 id: channelId
             },
-            relations: ['users']
+            relations: ['users', 'sanctions']
         })
         if (!channel)
-            return failureMResponse("this channel does not exist");
-
-        if (channel.users.find(u => u.id === userId))
-            return failureMResponse("user already on channel");
+            return failureMResponse("This channel does not exist");
 
         const user = await this.userService.getUserById(userId);
 
         if (!user)
-            return failureMResponse("user not found");
+            return failureMResponse("This user does not exist");
+
+        if (channel.users.find(u => u.id === userId))
+            return failureMResponse("You are already a member of this channel");
+
+        if (channel.sanctions.find(s => s.userId === userId && s.type === SanctionType.BAN))
+            return failureMResponse("You are banned from this channel");
 
         channel.users.push(user);
         return this.channelRepository.save(channel)
@@ -248,7 +251,6 @@ export class ChannelService {
     }
 
     async addMessage(channelId: number, message: AddMessageEntityDto): Promise<MessageEntity> {
-        // check if channel exists and pull messages relation
         const channel = await this.channelRepository.findOne({
             where: {
                 id: channelId
@@ -344,9 +346,7 @@ export class ChannelService {
         const endSanction = new Date(Date.now() + seconds * 1000);
 
         if (previousSanction) {
-            console.log("OLD SANCTION FOUND");
             if (endSanction.getTime() > previousSanction.end.getTime()) {
-                console.log("OLD SANCTION REPLACE");
                 channel.sanctions = channel.sanctions.filter(s => s.id !== previousSanction.id);
                 await this.sanctionRepository.remove(previousSanction);
             } else return successMResponse(true);

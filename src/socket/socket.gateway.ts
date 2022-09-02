@@ -207,7 +207,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        await this.channelService.addUserToChannel(user.id, data.channelId);
+        const r = await this.channelService.addUserToChannel(user.id, data.channelId);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
 
         const channel = await this.channelService.getChannelById(data.channelId, [
             'messages',
@@ -433,12 +438,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const channel = await this.channelService.getChannelById(data.channelId, [
             'users',
+            'sanctions'
         ]);
 
         if (!channel) {
             client.emit('error', 'Invalid channel');
             return;
         }
+
+        if (!channel.users.find(u => u.id === user.id)) {
+            client.emit('error', 'You are not a member of this channel');
+            return;
+        }
+
+        if (channel.sanctions.find(s => s.userId === user.id)) {
+            client.emit('error', 'You are not allowed to send messages');
+            return;
+        }
+
         const message = await this.channelService.addMessage(
             channel.id,
             plainToClass(AddMessageEntityDto, {
@@ -997,7 +1014,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (!channel.users.find(u => u.id === data.userId)) {
+        if (!channel.users.find(u => u.id === data.userId) && data.sanction === SanctionType.MUTE) {
             client.emit('error', `Target is not a member of this channel`);
             return;
         }
