@@ -1,4 +1,4 @@
-import {Column, Entity, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
+import {Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
 import {ChannelEntity} from "./channel.entity";
 
 @Entity('MessageEntity')
@@ -19,4 +19,6 @@ export class MessageEntity {
     @Column()
     content: string;
 
+    @CreateDateColumn()
+    createdAt: Date;
 }

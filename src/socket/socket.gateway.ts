@@ -15,6 +15,9 @@ import {UsersService} from 'src/users/users.service';
 import {SocketService} from './socket.service';
 import * as argon2 from "argon2";
 import {SanctionType} from "../channel/entities/sanction.entity";
+import {Repository} from "typeorm";
+import {ChannelEntity} from "../channel/entities/channel.entity";
+import {InjectRepository} from "@nestjs/typeorm";
 
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -25,6 +28,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private channelService: ChannelService,
         private userService: UsersService,
         private socketService: SocketService,
+        @InjectRepository(ChannelEntity)
+        private channelRepository: Repository<ChannelEntity>
     ) {
         setInterval(async () => {
             const deleted = await this.channelService.refreshSanctions();
@@ -163,7 +168,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('private' in data) || !('name' in data)) {
+        if (!user || !('private' in data) || !('name' in data) || /^\s*$/.test(data.name)) {
             client.emit('error', 'cannot create this channel');
             return;
         }
@@ -193,6 +198,54 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+    }
+
+    @SubscribeMessage('channel_update')
+    async updateChannel(
+        @MessageBody() data: { name: string, isPrivate: boolean, channelId: number, password: string },
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user || !('isPrivate' in data) || !('name' in data) || !('password' in data) || /^\s*$/.test(data.name)) {
+            client.emit('error', 'Invalid data');
+            return;
+        }
+
+        data.name = data.name.trim();
+
+        if ('password' in data)
+            data.isPrivate = true;
+
+        const channel = await this.channelService.getChannelById(data.channelId, ['messages', 'admins']);
+
+        if (!channel) {
+            client.emit('error', 'No such channel');
+            return;
+        }
+
+        if (!channel.admins.find(a => a.id === user.id) && channel.ownerId !== user.id) {
+            client.emit('error', 'Insufficient permissions');
+            return;
+        }
+
+        channel.isPrivate = data.isPrivate;
+        try {
+            if (channel.password !== "")
+                channel.password = await argon2.hash(data.password);
+        } catch {
+            client.emit('error', 'Password hashing failed');
+            return;
+        }
+        channel.name = data.name;
+
+        this.channelRepository.save(channel).then(() => {
+            client.emit('success', 'Successfully updated channel');
+            this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        }).catch(() => {
+            client.emit('error', 'Channel name is taken');
+            return;
+        });
     }
 
     @SubscribeMessage('channel_join')
@@ -475,6 +528,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             userId: user.id,
             userNick: user.nickname,
             content: message.content,
+            createdAt: message.createdAt
         });
     }
 
@@ -556,17 +610,22 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage('friend_add')
     async addFriend(
-        @MessageBody() data: { userNick: string },
+        @MessageBody() data: { user: string | number },
         @ConnectedSocket() client: Socket,
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('userNick' in data)) {
+        if (!user || !('user' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
 
-        const friend = await this.userService.getUserByNickname(data.userNick, ['friends']);
+        let friend = undefined;
+        if (typeof data.user === 'string') {
+            friend = await this.userService.getUserByNickname(data.user, ['friends']);
+        } else {
+            friend = await this.userService.getUserById(data.user, ['friends']);
+        }
 
         if (!friend || friend.id === user.id) {
             client.emit('error', `Could not add user as friend`);
