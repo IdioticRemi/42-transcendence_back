@@ -12,6 +12,7 @@ import {UsersService} from 'src/users/users.service';
 import {UserEntity} from "../users/entities/user.entity";
 import * as argon2 from "argon2";
 import {SanctionEntity, SanctionType} from './entities/sanction.entity';
+import { Server } from 'socket.io';
 
 @Injectable()
 export class ChannelService {
@@ -316,7 +317,7 @@ export class ChannelService {
         return channel.sanctions;
     }
 
-    async addChannelSanction(channelId: number, userId: number, targetId: number, sanction: SanctionType, minutes: number): Promise<MResponse<boolean>> {
+    async addChannelSanction(channelId: number, userId: number, targetId: number, sanction: SanctionType, seconds: number): Promise<MResponse<boolean>> {
 
         const channel = await this.getChannelById(channelId, ['admins', 'sanctions']);
         if (!channel)
@@ -339,15 +340,15 @@ export class ChannelService {
         if (channel.admins.find(a => a.id === target.id) && !(channel.ownerId === userId))
             return failureMResponse("insufficient permissions");
 
-
-
-        // TODO: addition ban time
         const previousSanction = channel.sanctions.find(s => s.userId === target.id && s.type === sanction);
-        const endSanction = new Date(Date.now() + minutes * 60 * 1000);
+        const endSanction = new Date(Date.now() + seconds * 1000);
 
         if (previousSanction) {
+            console.log("OLD SANCTION FOUND");
             if (endSanction.getTime() > previousSanction.end.getTime()) {
+                console.log("OLD SANCTION REPLACE");
                 channel.sanctions = channel.sanctions.filter(s => s.id !== previousSanction.id);
+                await this.sanctionRepository.remove(previousSanction);
             } else return successMResponse(true);
         }
 
@@ -364,30 +365,37 @@ export class ChannelService {
             .catch(() => { return failureMResponse("database error"); })
     }
 
-    //TODO: MResponse ?
-    async removeChannelBan(channelId: number, userId: number): Promise<boolean> {
-
-        const channel = await this.getChannelById(channelId, ['sanctions']);
+    async removeSanction(channelId: number, userId: number, targetId: number, sanctionType: SanctionType): Promise<MResponse<boolean>> {
+        const channel = await this.getChannelById(channelId, ['sanctions', 'admins']);
         if (!channel)
-            return false;
+            return failureMResponse("Invalid channel");
 
         const user = await this.userService.getUserById(userId);
         if (!user)
-            return false;
+            return failureMResponse("Invalid user");
 
-        if (!channel.sanctions.find((b) => b.userId === user.id))
-            return false;
+        const target = await this.userService.getUserById(targetId);
+        if (!target)
+            return failureMResponse("Invalid target");
 
-        channel.sanctions = channel.sanctions.filter((b) => b.userId !== user.id);
-        
-        return this.channelRepository.save(channel)
-            .then(() => { return true })
-            .catch(() => { return false })
+        if (!channel.sanctions.find(s => s.userId === target.id && s.type === sanctionType))
+            return failureMResponse(`Target is not ${sanctionType === SanctionType.BAN ? 'banned' : 'muted'}`);
 
+        if (!channel.admins.find(u => u.id === user.id) && user.id !== channel.ownerId)
+            return failureMResponse("Insufficient permissions");
+
+        const sanction = channel.sanctions.find((s) => s.userId === target.id && s.type === sanctionType);
+
+        if (!sanction)
+            return failureMResponse("No such sanction");
+
+        return this.sanctionRepository.remove(sanction)
+            .then(() => { return successMResponse(true); })
+            .catch(() => { return failureMResponse("Failed to save to database"); })
     }
 
     async refreshSanctions() {
-        const allSanctions = await this.sanctionRepository.find();
+        const allSanctions = await this.sanctionRepository.find({ relations: ['channel'] });
         const currentTime = new Date();
         const toDelete: SanctionEntity[] = [];
 
@@ -398,6 +406,7 @@ export class ChannelService {
 
         if (toDelete.length)
             await this.sanctionRepository.delete(toDelete.map(s => s.id));
+        return toDelete;
     }
 
     async getChannelSanctionsFormatted(channelId: number) {

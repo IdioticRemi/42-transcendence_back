@@ -1,5 +1,5 @@
 import {UserEntity} from "src/users/entities/user.entity";
-import {Column, Entity, ManyToMany, PrimaryGeneratedColumn} from "typeorm";
+import {Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
 import {ChannelEntity} from "./channel.entity";
 
 export enum SanctionType {
@@ -19,7 +19,7 @@ export class SanctionEntity {
     @Column()
     type: string;
 
-    @ManyToMany(() => ChannelEntity, channel => channel.sanctions)
+    @ManyToOne(() => ChannelEntity, channel => channel.sanctions, {onDelete: 'CASCADE', onUpdate: 'CASCADE'})
     channel: ChannelEntity;
 
     @Column()

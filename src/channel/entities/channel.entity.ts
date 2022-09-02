@@ -35,11 +35,10 @@ export class ChannelEntity {
     @ManyToMany(() => UserEntity)
     admins: UserEntity[];
 
-    @JoinTable()
-    @ManyToMany(() => SanctionEntity, {cascade: true})
+    @OneToMany(() => SanctionEntity, sanction => sanction.channel, { cascade: true })
     sanctions: SanctionEntity[]
 
-    @OneToMany(() => MessageEntity, message => message.channel, {cascade: true})
+    @OneToMany(() => MessageEntity, message => message.channel, { cascade: true })
     messages: MessageEntity[];
 
 }

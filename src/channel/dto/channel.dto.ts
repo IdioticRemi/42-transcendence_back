@@ -24,7 +24,7 @@ export class ChannelDto {
     admins: UserEntity[];
 
     @Expose()
-    banned: SanctionEntity[];
+    sanctions: SanctionEntity[];
 
     @Expose()
     messages: MessageEntity[];
