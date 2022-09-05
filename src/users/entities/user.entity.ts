@@ -1,4 +1,4 @@
-import { Exclude, Type } from "class-transformer";
+import { Exclude, Expose, Type } from "class-transformer";
 import {ChannelEntity} from "src/channel/entities/channel.entity";
 import {GameEntity} from "src/game/entities/game.entity";
 import {
@@ -16,6 +16,7 @@ import {
 @Entity('UserEntity')
 export class UserEntity {
 
+    @Expose()
     @PrimaryColumn()
     id: number;
 
@@ -30,12 +31,14 @@ export class UserEntity {
     })
     img_path: string;
 
+    @Expose()
     @Column({
         length: 16,
         unique: true
     })
     username: string;
 
+    @Expose()
     @Column({
         length: 16,
         unique: true,

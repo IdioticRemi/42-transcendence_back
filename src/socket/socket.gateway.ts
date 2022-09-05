@@ -19,6 +19,7 @@ import {Repository} from "typeorm";
 import {ChannelEntity} from "../channel/entities/channel.entity";
 import {InjectRepository} from "@nestjs/typeorm";
 import { ChannelDto } from 'src/channel/dto/channel.dto';
+import { SendUserDto } from 'src/users/dto/user.dto';
 
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
