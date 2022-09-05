@@ -1,3 +1,4 @@
+import { Exclude, Expose, Type } from "class-transformer";
 import {ChannelEntity} from "src/channel/entities/channel.entity";
 import {GameEntity} from "src/game/entities/game.entity";
 import {
@@ -12,18 +13,14 @@ import {
     UpdateDateColumn
 } from "typeorm";
 
-export enum UserStatus {
-    OFFLINE = 0,
-    ONLINE = 1,
-    INGAME = 2,
-}
-
 @Entity('UserEntity')
 export class UserEntity {
 
+    @Expose()
     @PrimaryColumn()
     id: number;
 
+    @Exclude()
     @Column({
         default: ""
     })
@@ -34,25 +31,30 @@ export class UserEntity {
     })
     img_path: string;
 
+    @Expose()
     @Column({
         length: 16,
         unique: true
     })
     username: string;
 
+    @Expose()
     @Column({
         length: 16,
         unique: true,
     })
     nickname: string;
 
+    @Type(() => ChannelEntity)
     @ManyToMany(() => ChannelEntity, (channel) => channel.users)
     channels: ChannelEntity[];
 
+    @Type(() => UserEntity)
     @JoinTable({joinColumn: {name: 'UserEntity_id_1'}})
     @ManyToMany(() => UserEntity, {cascade: true})
     friends: UserEntity[]
 
+    @Type(() => UserEntity)
     @JoinTable({joinColumn: {name: 'UserEntity_id_1'}})
     @ManyToMany(() => UserEntity, {cascade: true})
     blocked: UserEntity[]

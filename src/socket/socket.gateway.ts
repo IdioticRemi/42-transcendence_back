@@ -18,6 +18,8 @@ import {SanctionType} from "../channel/entities/sanction.entity";
 import {Repository} from "typeorm";
 import {ChannelEntity} from "../channel/entities/channel.entity";
 import {InjectRepository} from "@nestjs/typeorm";
+import { ChannelDto } from 'src/channel/dto/channel.dto';
+import { SendUserDto } from 'src/users/dto/user.dto';
 
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -126,7 +128,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         userChannels.forEach((c) => {
             client.join(`channel_${c.id}`);
-            client.emit('channel_info', c);
+            client.emit('channel_info', plainToClass(ChannelDto, c, {excludeExtraneousValues: true}));
         });
     }
 
@@ -158,7 +160,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        client.emit('channel_info', channel);
+        client.emit('channel_info', plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
     }
 
     @SubscribeMessage('channel_create')
@@ -177,7 +179,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             data.private = true;
 
         const ret = await this.channelService.createChannel(user.id, data.name, data.password || "", data.private);
-        // await this.channelService.addUserToChannel(user.id, data.channelId);
 
         if (!ret) {
             client.emit('error', 'Could not create channel');
@@ -197,7 +198,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
-        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        this.server.to(`channel_${channel.id}`).emit('channel_info', plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
     }
 
     @SubscribeMessage('channel_update')
@@ -241,7 +242,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         this.channelRepository.save(channel).then(() => {
             client.emit('success', 'Successfully updated channel');
-            this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+            this.server.to(`channel_${channel.id}`).emit('channel_info', plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
         }).catch(() => {
             client.emit('error', 'Channel name is taken');
             return;
@@ -298,7 +299,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
-        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        this.server.to(`channel_${channel.id}`).emit('channel_info', plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
         this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: data.channelId, users });
     }
 
@@ -366,7 +367,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
-        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        this.server.to(`channel_${channel.id}`).emit('channel_info', plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
         this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
     }
 
@@ -473,7 +474,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.leave(`channel_${channel.id}`);
         client.emit('channel_leave', {channelId: channel.id});
-        this.server.to(`channel_${channel.id}`).emit('channel_info', channel);
+        this.server.to(`channel_${channel.id}`).emit('channel_info', plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
         this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
     }
 
@@ -1092,5 +1093,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.emit('success', `Target is no longer ${data.sanction === 'mute' ? 'muted' : 'banned'}`);
         this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
+    }
+
+    // TODO: voir avec Remi pertinence de la fonction
+    sendSocketMsgByUserId(userId: number, event: string, payload: any) {
+        const client = this.socketService.getUserKVByUserId(userId);
+        const isClientOnline = !!client;
+
+        if (isClientOnline) {
+            this.server.to(client[0]).emit('success', payload);
+        }
     }
 }
