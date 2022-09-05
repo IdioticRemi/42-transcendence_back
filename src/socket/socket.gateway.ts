@@ -21,6 +21,12 @@ import {InjectRepository} from "@nestjs/typeorm";
 import { ChannelDto } from 'src/channel/dto/channel.dto';
 import { SendUserDto } from 'src/users/dto/user.dto';
 
+export class UserPermission {
+    id: number;
+    nickname: string;
+    perm: number;
+}
+
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
@@ -279,20 +285,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users = [];
-        const owner = channel.users.find(u => u.id === channel.ownerId);
-
-        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
-
-        channel.users.forEach((u) => {
-            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
-
-            if (channel.admins.find(a => a.id === u.id))
-                userObj.perm = 1;
-
-            if (u.id !== owner.id)
-                users.push(userObj);
-        });
+        const users = this.getChannelPermissionList(channel);
 
         delete channel.users;
         delete channel.admins;
@@ -346,21 +339,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users = [];
-        const owner = channel.users.find(u => u.id === channel.ownerId);
-
-        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
-        users.push({ id: user.id, nickname: user.nickname, perm: 0 });
-
-        channel.users.forEach((u) => {
-            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
-
-            if (channel.admins.find(a => a.id === u.id))
-                userObj.perm = 1;
-
-            if (u.id !== owner.id)
-                users.push(userObj);
-        });
+        const users = this.getChannelPermissionList(channel);
 
         delete channel.users;
         delete channel.admins;
@@ -454,20 +433,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users = [];
-        const owner = channel.users.find(u => u.id === channel.ownerId);
-
-        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
-
-        channel.users.forEach((u) => {
-            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
-
-            if (channel.admins.find(a => a.id === u.id))
-                userObj.perm = 1;
-
-            if (u.id !== owner.id)
-                users.push(userObj);
-        });
+        const users = this.getChannelPermissionList(channel);
 
         delete channel.users;
         delete channel.admins;
@@ -832,20 +798,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users = [];
-        const owner = channel.users.find(u => u.id === channel.ownerId);
-
-        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
-
-        channel.users.forEach((u) => {
-            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
-
-            if (channel.admins.find(a => a.id === u.id))
-                userObj.perm = 1;
-
-            if (u.id !== owner.id)
-                users.push(userObj);
-        });
+        const users = this.getChannelPermissionList(channel);
 
         client.emit("channel_users", { channelId: channel.id, users });
     }
@@ -874,20 +827,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users: { id: number, nickname: string, perm: number }[] = [];
-        const owner = channel.users.find(u => u.id === channel.ownerId);
-
-        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
-
-        channel.users.forEach((u) => {
-            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
-
-            if (channel.admins.find(a => a.id === u.id))
-                userObj.perm = 1;
-
-            if (u.id !== owner.id)
-                users.push(userObj);
-        });
+        const users = this.getChannelPermissionList(channel);
 5
         if (users.find(u => u.id === user.id)?.perm < users.find(u => u.id === data.userId)?.perm) {
             client.emit('error', `Insufficient permissions`);
@@ -938,22 +878,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const users = [];
-        const owner = channel.users.find(u => u.id === channel.ownerId);
-
-        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
-
-        channel.users.forEach((u) => {
-            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
-
-            if (channel.admins.find(a => a.id === u.id))
-                userObj.perm = 1;
-
-            if (u.id !== owner.id)
-                users.push(userObj);
-        });
-        5
-        if (users.find(u => u.id === user.id)?.perm > users.find(u => u.id === data.userId)) {
+        const users = this.getChannelPermissionList(channel);
+        
+        if (users.find(u => u.id === user.id)?.perm < users.find(u => u.id === data.userId).perm) {
             client.emit('error', `Insufficient permissions`);
             return;
         }
@@ -1103,5 +1030,25 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (isClientOnline) {
             this.server.to(client[0]).emit('success', payload);
         }
+    }
+
+    getChannelPermissionList(channel: ChannelEntity): UserPermission[] {
+
+        const users = [];
+        const owner = channel.users.find(u => u.id === channel.ownerId);
+
+        users.push({ id: owner.id, nickname: owner.nickname, perm: 2 });
+
+        channel.users.forEach((u) => {
+            const userObj = { id: u.id, nickname: u.nickname, perm: 0 };
+
+            if (channel.admins.find(a => a.id === u.id))
+                userObj.perm = 1;
+
+            if (u.id !== owner.id)
+                users.push(userObj);
+        });
+
+        return users;
     }
 }
