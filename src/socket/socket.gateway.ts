@@ -18,8 +18,7 @@ import {SanctionType} from "../channel/entities/sanction.entity";
 import {Repository} from "typeorm";
 import {ChannelEntity} from "../channel/entities/channel.entity";
 import {InjectRepository} from "@nestjs/typeorm";
-import { ChannelDto } from 'src/channel/dto/channel.dto';
-import { SendUserDto } from 'src/users/dto/user.dto';
+import {ChannelDto} from 'src/channel/dto/channel.dto';
 
 export class UserPermission {
     id: number;
@@ -55,10 +54,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
 
             for (const s of deleted) {
-                const targetSocket = this.socketService.getUserKVByUserId(s.userId);
-
-                if (!!targetSocket)
-                    this.server.to(targetSocket[0]).emit('warning', `You are no longer ${s.type}${s.type === 'mute' ? 'd' : 'ned'} ${s.type === 'mute' ? 'in' : 'from'} #${s.channel.name}`);
+                this.sendSocketMsgByUserId(
+                    s.userId,'warning', 
+                    `You are no longer ${s.type}${s.type === 'mute' ? 'd' : 'ned'} ${s.type === 'mute' ? 'in' : 'from'} #${s.channel.name}`
+                    );
             }
         }, 10 * 1e3);
     }
@@ -221,7 +220,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         data.name = data.name.trim();
 
-        if ('password' in data)
+        if (data.password !== '')
             data.isPrivate = true;
 
         const channel = await this.channelService.getChannelById(data.channelId, ['messages', 'admins']);
@@ -959,7 +958,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (!channel.users.find(u => u.id === data.userId)) {
+        const target = channel.users.find(u => u.id === data.userId);
+        if (!target) {
             client.emit('error', `Target is not a member of this channel`);
             return;
         }
@@ -970,6 +970,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
+        client.emit('success', `You successfully ${data.sanction === 'ban' ? 'banned' : 'muted' } ${target.nickname}`);
+        this.sendSocketMsgByUserId(target.id, 'error', `You have been ${data.sanction === 'ban' ? 'banned' : 'muted' } from #${channel.name} by ${user.nickname}`);
         const sanctions = await this.channelService.getChannelSanctionsFormatted(channel.id);
 
         this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
@@ -1028,7 +1030,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const isClientOnline = !!client;
 
         if (isClientOnline) {
-            this.server.to(client[0]).emit('success', payload);
+            this.server.to(client[0]).emit(event, payload);
         }
     }
 
