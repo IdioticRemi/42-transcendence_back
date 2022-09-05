@@ -289,6 +289,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         delete channel.users;
         delete channel.admins;
 
+
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
         this.server.to(`channel_${channel.id}`).emit('channel_info', plainToClass(ChannelDto, channel, {excludeExtraneousValues: true}));
@@ -339,6 +340,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const users = this.getChannelPermissionList(channel);
+        //TODO: voir avec Remi push a la main ok ?
+        users.push({id: user.id, nickname: user.nickname, perm: 0});
 
         delete channel.users;
         delete channel.admins;
