@@ -1094,4 +1094,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('success', `Target is no longer ${data.sanction === 'mute' ? 'muted' : 'banned'}`);
         this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
     }
+
+    // TODO: voir avec Remi pertinence de la fonction
+    sendSocketMsgByUserId(userId: number, event: string, payload: any) {
+        const client = this.socketService.getUserKVByUserId(userId);
+        const isClientOnline = !!client;
+
+        if (isClientOnline) {
+            this.server.to(client[0]).emit('success', payload);
+        }
+    }
 }
