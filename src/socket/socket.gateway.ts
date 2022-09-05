@@ -604,7 +604,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const r = await this.userService.addFriend(user.id, friend.id);
 
         if (r.status !== "success") {
-            client.emit('error', `Could not add user as friend`);
+            client.emit('error', r.message);
             return;
         }
 
@@ -621,12 +621,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: isFriendConnected ? 'online' : 'offline', messages: [] });
         }
         else {
-            const friendSocket = this.socketService.getUserKVByUserId(friend.id);
-            const isFriendConnected = !!friendSocket;
-
-            if (isFriendConnected) {
-                this.server.to(friendSocket[0]).emit('warning', `${user.nickname} added you as a friend`);
-            }
+            this.sendSocketMsgByUserId(friend.id, 'warning', `${user.nickname} added you as a friend`);
 
             client.emit('success', `Sent friend request to ${user.nickname}`);
             client.emit('friend_info', { id: friend.id, nickname: friend.nickname, status: 'pending', messages: [] });
