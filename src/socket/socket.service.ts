@@ -98,29 +98,47 @@ export class SocketService {
             this.matchmakingClassic.push(userId);
         else
             this.matchmakingCustom.push(userId);
-        // matchmake();
+        this.checkMatch();
     }
 
-    async matchmake(): Promise<GameEntity | undefined> {
+    async checkMatch(): Promise<[GameEntity, GameEntity] | null>  {
         if (this.matchmakingClassic.length > 1) {
-            const p1Id = this.matchmakingClassic[0];    
-            const p2Id = this.matchmakingClassic[1];
-            const P1 = this.user
-            const gameP1 = this.gameRepository.create({
-                player: p1,
-                opponent: p2,
-                type: GameType.CLASSIC
-            })   
-            if (!game) {
-                console.debug("impossible to create game")
-            }
-            else {
-                return this.gameRepository.save(game)
-                    .then((g) => {return g})
-                    .catch((e) => {console.debug(e); return undefined})
-            }
+            return await this.matchmake(this.matchmakingClassic, GameType.CLASSIC)
         }
+        else if (this.matchmakingCustom.length > 1) {
+            return await this.matchmake(this.matchmakingCustom, GameType.CUSTOM)
+        }
+    }
 
+    async matchmake(queue: number[], type: GameType): Promise<[GameEntity, GameEntity] | null> {
+        const [p1, p2] = await Promise.all(
+            queue.splice(0, 2)
+            .map(p => this.userService.getUserById(p))
+        );
+
+        if (!p1 || !p2)
+            return null;
+        
+        const gameP1 = this.gameRepository.create({
+            player: p1,
+            opponent: p2,
+            type
+        })
+        const gameP2 = this.gameRepository.create({
+            player: p2,
+            opponent: p1,
+            type
+        })
+        if (!gameP1 || !gameP2) {
+            console.debug("impossible to create game")
+            return null;
+        }
+        await this.gameRepository.save(gameP1).catch((e) => {console.debug(e); return null})
+        await this.gameRepository.save(gameP2).catch((e) => {console.debug(e); return null})
+        
+        console.debug("game created");
+
+        return ([gameP1, gameP2]);
     }
 
     isUserOnline(userId: number): boolean {

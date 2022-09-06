@@ -21,24 +21,25 @@ export class UsersService {
         return this.usersRepository.find();
     }
 
-    async getUserById(id: number, relations: string[] = []): Promise<UserEntity> {
+    async getUserById(id: number, relations: string[] = []): Promise<UserEntity | null> {
         return await this.usersRepository.findOne({
             where: {"id": id},
             relations: relations
-        });
+
+        }).catch(() => null);
     }
 
-    async getUserByUsername(user: string): Promise<UserEntity> {
+    async getUserByUsername(user: string): Promise<UserEntity | null> {
         return await this.usersRepository.findOne({
             where: {"username": user},
-        });
+        }).catch(() => null);
     }
 
-    async getUserByToken(token: string, relations: string[] = []): Promise<UserEntity> {
+    async getUserByToken(token: string, relations: string[] = []): Promise<UserEntity | null> {
         return await this.usersRepository.findOne({
             where: {token},
             relations,
-        });
+        }).catch(() => null);
     }
 
     async addUser(newUser: AddUserDto): Promise<MResponse<SendUserDto>> {
