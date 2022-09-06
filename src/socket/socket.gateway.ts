@@ -26,6 +26,11 @@ export class UserPermission {
     perm: number;
 }
 
+export class SocketMessage {
+    event: string;
+    payload: any;
+}
+
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
@@ -286,6 +291,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const users = this.getChannelPermissionList(channel);
 
+
+        //TODO: voir si encore necessaire apres la converstion en ChannelDTO
         delete channel.users;
         delete channel.admins;
 
@@ -343,6 +350,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         //TODO: voir avec Remi push a la main ok ?
         users.push({id: user.id, nickname: user.nickname, perm: 0});
 
+        //TODO: voir si encore necessaire apres la converstion en ChannelDTO
         delete channel.users;
         delete channel.admins;
 
@@ -357,7 +365,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { channelId: number },
         @ConnectedSocket() client: Socket,
     ) {
-        const user = await this.socketService.getConnectedUser(client.id);
+        const user = this.socketService.getConnectedUser(client.id);
 
         if (!user || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
@@ -404,7 +412,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 return;
             user = tmp[1];
         } else {
-            user = await this.socketService.getConnectedUser(client.id);
+            user = this.socketService.getConnectedUser(client.id);
         }
 
         if (!user || !('channelId' in data)) {
@@ -437,6 +445,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const users = this.getChannelPermissionList(channel);
 
+        //TODO: voir si encore necessaire apres la converstion en ChannelDTO
         delete channel.users;
         delete channel.admins;
 
@@ -451,7 +460,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { channelId: number; content: string },
         @ConnectedSocket() client: Socket,
     ) {
-        const user = await this.socketService.getConnectedUser(client.id);
+        const user = this.socketService.getConnectedUser(client.id);
 
         if (!user || !('channelId' in data) || !('content' in data) || /^\s*$/.test(data.content)) {
             client.emit('error', `Invalid data or empty message`);
@@ -825,7 +834,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const users = this.getChannelPermissionList(channel);
-5
+
         if (users.find(u => u.id === user.id)?.perm < users.find(u => u.id === data.userId)?.perm) {
             client.emit('error', `Insufficient permissions`);
             return;
@@ -840,12 +849,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         users.find(u => u.id === data.userId).perm = 1;
 
-        const newAdminSocket = this.socketService.getUserKVByUserId(data.userId);
-        const isNewAdminOnline = !!newAdminSocket;
-
-        if (isNewAdminOnline) {
-            this.server.to(newAdminSocket[0]).emit('success', `You are now a channel admin in #${channel.name}`);
-        }
+        this.sendSocketMsgByUserId(data.userId, 'success', `You are now a channel admin in #${channel.name}`);
 
         client.emit('success', `${users.find(u => u.id === data.userId)?.nickname} is now a channel admin`);
         this.server.to(`channel_${channel.id}`).emit("channel_users", { channelId: channel.id, users });
@@ -891,12 +895,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         users.find(u => u.id === data.userId).perm = 0;
 
-        const oldAdminSocket = this.socketService.getUserKVByUserId(data.userId);
-        const isNewAdminOnline = !!oldAdminSocket;
-
-        if (isNewAdminOnline) {
-            this.server.to(oldAdminSocket[0]).emit('warning', `You are no longer a channel admin in #${channel.name}`);
-        }
+        this.sendSocketMsgByUserId(data.userId, 'warning', `You are no longer a channel admin in #${channel.name}`);
 
         client.emit('success', `${users.find(u => u.id === data.userId)?.nickname} is no longer a channel admin`);
 
@@ -1013,10 +1012,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const sanctions = await this.channelService.getChannelSanctionsFormatted(channel.id);
-        const targetSocket = this.socketService.getUserKVByUserId(data.userId);
 
-        if (!!targetSocket)
-            this.server.to(targetSocket[0]).emit('warning', `You are no longer ${data.sanction}${data.sanction === 'mute' ? 'd' : 'ned'} ${data.sanction === 'mute' ? 'in' : 'from'} #${channel.name}`);
+        this.sendSocketMsgByUserId(data.userId,
+            'warning',
+            `You are no longer ${data.sanction}${data.sanction === 'mute' ? 'd' : 'ned'} ${data.sanction === 'mute' ? 'in' : 'from'} #${channel.name}`
+            );
 
         client.emit('success', `Target is no longer ${data.sanction === 'mute' ? 'muted' : 'banned'}`);
         this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
@@ -1029,6 +1029,17 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (isClientOnline) {
             this.server.to(client[0]).emit(event, payload);
+        }
+    }
+
+
+    // TODO: voir avec Remi pertinence de la fonction
+    sendSocketMultiMsgByUserId(userId: number, messages: SocketMessage[]) {
+        const client = this.socketService.getUserKVByUserId(userId);
+        const isClientOnline = !!client;
+
+        if (isClientOnline) {
+            messages.forEach((message) => this.server.to(client[0]).emit(message.event, message.payload));
         }
     }
 
