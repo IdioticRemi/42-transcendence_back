@@ -103,14 +103,17 @@ export class SocketService {
 
     async checkMatch(): Promise<[GameEntity, GameEntity] | null>  {
         if (this.matchmakingClassic.length > 1) {
-            return await this.matchmake(this.matchmakingClassic, GameType.CLASSIC)
+            return await this.matchmake(GameType.CLASSIC)
         }
         else if (this.matchmakingCustom.length > 1) {
-            return await this.matchmake(this.matchmakingCustom, GameType.CUSTOM)
+            return await this.matchmake(GameType.CUSTOM)
         }
     }
 
-    async matchmake(queue: number[], type: GameType): Promise<[GameEntity, GameEntity] | null> {
+    async matchmake(type: GameType): Promise<[GameEntity, GameEntity] | null> {
+        
+        const queue = type === GameType.CLASSIC ? this.matchmakingClassic : this.matchmakingCustom;
+        
         const [p1, p2] = await Promise.all(
             queue.splice(0, 2)
             .map(p => this.userService.getUserById(p))
@@ -119,12 +122,12 @@ export class SocketService {
         if (!p1 || !p2)
             return null;
         
-        const gameP1 = this.gameRepository.create({
+        let gameP1 = this.gameRepository.create({
             player: p1,
             opponent: p2,
             type
         })
-        const gameP2 = this.gameRepository.create({
+        let gameP2 = this.gameRepository.create({
             player: p2,
             opponent: p1,
             type
@@ -133,11 +136,16 @@ export class SocketService {
             console.debug("impossible to create game")
             return null;
         }
-        await this.gameRepository.save(gameP1).catch((e) => {console.debug(e); return null})
-        await this.gameRepository.save(gameP2).catch((e) => {console.debug(e); return null})
+        gameP1 = await this.gameRepository.save(gameP1).catch((e) => {console.debug(e); return null})
+        try {
+            gameP2 = await this.gameRepository.save(gameP2);
+        } catch (e) {
+            console.debug(e);
+            this.gameRepository.delete(gameP1.id);
+            return null;
+        }
         
-        console.debug("game created");
-
+        console.debug("game created", [gameP1, gameP2]);
         return ([gameP1, gameP2]);
     }
 
