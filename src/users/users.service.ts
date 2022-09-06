@@ -64,24 +64,24 @@ export class UsersService {
             });
     }
 
-    async updateAvatar(user: string, path: string) {
-        console.log("updating", user, path);
+    async updateAvatar(user: string, path: string): Promise<MResponse<boolean>> {
         // checks if previous uploaded avatar and filename is different
-        console.log(path);
         const userResult = await this.getUserByUsername(user);
+        if (!userResult) {
+            return failureMResponse("User does not exist? (what ???)");
+        }
         if (userResult.img_path !== defaultAvatar && userResult.img_path !== path) {
-            console.log("deleting previous avatar");
             // delete previous avatar
             try {
                 fs.unlinkSync(userResult.img_path);
-                //file removed
-            } catch (err) {
-                console.error(err);
-            }
+            } catch {}
         }
+        
         // register new avatar's path in DB
-        await this.usersRepository.update({username: user}, {img_path: path}).catch((e) => {
-            console.debug(e)
+        return await this.usersRepository.update({username: user}, {img_path: path}).then(() => {
+            return successMResponse(true);
+        }).catch((e) => {
+            return failureMResponse("failed to save to database");
         });
     }
 

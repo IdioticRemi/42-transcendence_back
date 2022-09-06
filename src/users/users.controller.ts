@@ -3,9 +3,11 @@ import {
     Controller,
     Delete,
     Get,
+    Header,
     Param,
     ParseIntPipe,
     Post,
+    Req,
     Res,
     UnsupportedMediaTypeException,
     UploadedFile,
@@ -49,18 +51,22 @@ export class UsersController {
         return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
     }
 
+    
     @UseGuards(UserTokenGuard)
     @Post('avatar/me')
     @UseInterceptors(FileInterceptor('file', {
         storage: diskStorage({
             destination: './uploads',
             filename: function (req, file, cb) {
-                cb(null, req.params.user + extname(file.originalname).toLowerCase());
+                console.log(req.user);
+                cb(null, req.user.username + extname(file.originalname).toLowerCase());
             }
         }),
         limits: {fileSize: maxUploadSize},
         fileFilter: function fileFilter(req, file, cb) {
+            console.debug("running test...");
             if (file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg') {
+                console.debug("wrong file type");
                 return cb(new UnsupportedMediaTypeException('Only jpg/jpeg or png files are accepted'), false);
             }
             cb(null, true);
@@ -68,14 +74,16 @@ export class UsersController {
     }))
     async uploadFile(
         @UploadedFile() file: Express.Multer.File,
-        @Param('user') user: string,
-    ): Promise<void> {
-        console.log(user, file);
-        console.log(file.mimetype);
-        await this.usersService.updateAvatar(user, file.path);
+        @Req() req
+    ): Promise<MResponse<boolean>> {
+        if (!req.file)
+            return failureMResponse("could not find file in body");
+
+        return await this.usersService.updateAvatar(req.user.username, file.path);;
     }
 
-    @Get('avatar/:user')
+    @Get('avatar/:user/*')
+    @Header('Cache-Control', 'none')
     async getFile(
         @Param('user') user: string,
         @Res() res: Response

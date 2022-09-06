@@ -34,6 +34,7 @@ export class UserInfoMiddleware implements NestMiddleware {
         try {
             req.user = await this.userService.getUserByToken(token);
         } catch (e) {
+            console.debug(e);
         }
 
         next();

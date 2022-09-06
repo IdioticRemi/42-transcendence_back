@@ -8,6 +8,7 @@ export class UserTokenGuard implements CanActivate {
 
         if (!req.user)
             return false;
+
         return true;
     }
 }
