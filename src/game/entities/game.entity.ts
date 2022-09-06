@@ -23,7 +23,7 @@ export class GameEntity {
 
     @OneToOne(() => GameEntity, game => game.opponent)
     opponent: GameEntity;
-
+    
     @Column({
         default: 0
     })

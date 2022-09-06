@@ -19,6 +19,8 @@ import {Repository} from "typeorm";
 import {ChannelEntity} from "../channel/entities/channel.entity";
 import {InjectRepository} from "@nestjs/typeorm";
 import {ChannelDto} from 'src/channel/dto/channel.dto';
+import { failureMResponse } from 'lib/MResponse';
+import { GameType } from 'src/game/entities/game.entity';
 
 export class UserPermission {
     id: number;
@@ -1045,4 +1047,23 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         return users;
     }
+
+    @SubscribeMessage('request_match')
+    async requestMatch(
+        @MessageBody() data: { type: GameType },
+        @ConnectedSocket() client: Socket,
+    ) {
+        if (!client || !("type" in data)) {
+            client.emit('error', "Invalid data");
+            return ;
+        }
+        const user = this.socketService.getConnectedUser(client.id)
+        if (!user) {
+            client.emit('error', 'Invalid user');
+            return ;
+        }
+        this.socketService.addUserToMatchmaking(user.id, data.type)
+    }
+
+
 }

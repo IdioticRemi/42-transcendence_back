@@ -50,7 +50,7 @@ export class UsersController {
     }
 
     @UseGuards(UserTokenGuard)
-    @Post('avatar/:user')
+    @Post('avatar/me')
     @UseInterceptors(FileInterceptor('file', {
         storage: diskStorage({
             destination: './uploads',
