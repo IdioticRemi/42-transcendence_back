@@ -291,11 +291,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const users = this.getChannelPermissionList(channel);
 
-
-        //TODO: voir si encore necessaire apres la converstion en ChannelDTO
         delete channel.users;
         delete channel.admins;
-
 
         client.join(`channel_${channel.id}`);
         client.emit('channel_join', {channelId: channel.id});
@@ -347,10 +344,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const users = this.getChannelPermissionList(channel);
-        //TODO: voir avec Remi push a la main ok ?
+
         users.push({id: user.id, nickname: user.nickname, perm: 0});
 
-        //TODO: voir si encore necessaire apres la converstion en ChannelDTO
         delete channel.users;
         delete channel.admins;
 
@@ -445,7 +441,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const users = this.getChannelPermissionList(channel);
 
-        //TODO: voir si encore necessaire apres la converstion en ChannelDTO
         delete channel.users;
         delete channel.admins;
 
@@ -1022,24 +1017,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
     }
 
-    // TODO: voir avec Remi pertinence de la fonction
     sendSocketMsgByUserId(userId: number, event: string, payload: any) {
         const client = this.socketService.getUserKVByUserId(userId);
         const isClientOnline = !!client;
 
         if (isClientOnline) {
             this.server.to(client[0]).emit(event, payload);
-        }
-    }
-
-
-    // TODO: voir avec Remi pertinence de la fonction
-    sendSocketMultiMsgByUserId(userId: number, messages: SocketMessage[]) {
-        const client = this.socketService.getUserKVByUserId(userId);
-        const isClientOnline = !!client;
-
-        if (isClientOnline) {
-            messages.forEach((message) => this.server.to(client[0]).emit(message.event, message.payload));
         }
     }
 
