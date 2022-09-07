@@ -21,6 +21,7 @@ import {InjectRepository} from "@nestjs/typeorm";
 import {ChannelDto} from 'src/channel/dto/channel.dto';
 import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
+import { CONFIGURABLE_MODULE_ID } from '@nestjs/common/module-utils/constants';
 
 export class UserPermission {
     id: number;
@@ -1048,7 +1049,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return users;
     }
 
-    @SubscribeMessage('request_match')
+    @SubscribeMessage('addQueue')
     async requestMatch(
         @MessageBody() data: { type: GameType },
         @ConnectedSocket() client: Socket,
@@ -1062,8 +1063,29 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.emit('error', 'Invalid user');
             return ;
         }
-        this.socketService.addUserToMatchmaking(user.id, data.type)
+        console.debug(`game requested for ${user.nickname}`);
+        const r = this.socketService.addUserToMatchmaking(user.id, data.type);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        client.emit('success', r.payload);
+
+        const r2 = await this.socketService.checkMatch();
+
+        if (r2.status !== 'success') {
+            if (r2.message)
+                client.emit('error', r2.message);
+            return;
+        }
+
+        console.log("Found game for user!");
     }
+
+
+    
 
 
 }

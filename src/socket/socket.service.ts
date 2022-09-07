@@ -4,6 +4,7 @@ import { GameEntity, GameType } from 'src/game/entities/game.entity';
 import {UserEntity} from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import {UsersService} from 'src/users/users.service';
+import { failureMResponse, MResponse, successMResponse } from 'lib/MResponse';
 
 
 export interface Point {
@@ -90,63 +91,77 @@ export class SocketService {
     }
 
     disconnectUser(socketId: string) {
+        const user = this.getConnectedUser(socketId);
+
+        if (user) {
+            if (this.matchmakingClassic.includes(user.id))
+                this.matchmakingClassic = this.matchmakingClassic.filter(p => p !== user.id);
+            if (this.matchmakingCustom.includes(user.id))
+                this.matchmakingCustom = this.matchmakingCustom.filter(p => p !== user.id);
+        }
+
         this.users.delete(socketId);
     }
 
     addUserToMatchmaking(userId: number, type: GameType) {
-        if (type === GameType.CLASSIC)
+        // check if user already queued for a game
+        if (this.matchmakingClassic.includes(userId) || this.matchmakingCustom.includes(userId)) {
+            return failureMResponse("You are already queued up");
+        }
+        
+        if (type === GameType.CLASSIC) {
             this.matchmakingClassic.push(userId);
-        else
+            return successMResponse("Queued for a classic game");
+        }
+        if (type === GameType.CUSTOM) {
             this.matchmakingCustom.push(userId);
-        this.checkMatch();
+            return successMResponse("Queued for a custom game");
+        }
+        return failureMResponse("Unknown game type");
     }
 
-    async checkMatch(): Promise<[GameEntity, GameEntity] | null>  {
+    async checkMatch() {
         if (this.matchmakingClassic.length > 1) {
-            return await this.matchmake(GameType.CLASSIC)
+            return await this.matchmake(GameType.CLASSIC);
         }
         else if (this.matchmakingCustom.length > 1) {
-            return await this.matchmake(GameType.CUSTOM)
+            return await this.matchmake(GameType.CUSTOM);
         }
+        return failureMResponse("");
     }
 
-    async matchmake(type: GameType): Promise<[GameEntity, GameEntity] | null> {
+    async matchmake(type: GameType): Promise<MResponse<[GameEntity, GameEntity]>> {
         
         const queue = type === GameType.CLASSIC ? this.matchmakingClassic : this.matchmakingCustom;
         
-        const [p1, p2] = await Promise.all(
-            queue.splice(0, 2)
-            .map(p => this.userService.getUserById(p))
-        );
+        const [p1, p2] = queue.splice(0, 2).map(p => this.getConnectedUserById(p));
 
         if (!p1 || !p2)
-            return null;
+            return failureMResponse("a user is not online");
         
         let gameP1 = this.gameRepository.create({
             player: p1,
             opponent: p2,
             type
-        })
+        });
         let gameP2 = this.gameRepository.create({
             player: p2,
             opponent: p1,
             type
-        })
+        });
         if (!gameP1 || !gameP2) {
-            console.debug("impossible to create game")
-            return null;
+            return failureMResponse("could not create database objects");
         }
         gameP1 = await this.gameRepository.save(gameP1).catch((e) => {console.debug(e); return null})
         try {
             gameP2 = await this.gameRepository.save(gameP2);
         } catch (e) {
             console.debug(e);
-            this.gameRepository.delete(gameP1.id);
-            return null;
+            await this.gameRepository.delete(gameP1.id);
+            return failureMResponse("could not save to database");
         }
-        
-        console.debug("game created", [gameP1, gameP2]);
-        return ([gameP1, gameP2]);
+
+        return (successMResponse([gameP1, gameP2]));
     }
 
     isUserOnline(userId: number): boolean {

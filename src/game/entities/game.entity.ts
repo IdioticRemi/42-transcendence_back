@@ -8,8 +8,8 @@ export enum GameStatus {
 }
 
 export enum GameType {
-    CLASSIC = 0,
-    CUSTOM = 1,
+    CLASSIC = 'classic',
+    CUSTOM = 'custom',
 }
 
 @Entity('GameEntity')
@@ -21,8 +21,8 @@ export class GameEntity {
     @ManyToOne(() => UserEntity, user => user.games)
     player: UserEntity;
 
-    @OneToOne(() => GameEntity, game => game.opponent)
-    opponent: GameEntity;
+    @ManyToOne(() => UserEntity)
+    opponent: UserEntity;
     
     @Column({
         default: 0
@@ -32,7 +32,7 @@ export class GameEntity {
     @Column({
         default: GameType.CLASSIC
     })
-    type: number;
+    type: string;
 
     @Column({
         default: GameStatus.PENDING

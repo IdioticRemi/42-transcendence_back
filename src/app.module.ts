@@ -14,7 +14,6 @@ import {MulterModule} from '@nestjs/platform-express';
 import {GameModule} from './game/game.module';
 import {GameEntity} from './game/entities/game.entity';
 import {SanctionEntity} from './channel/entities/sanction.entity';
-import {GameQueueEntity} from './game/entities/game.queue.entity';
 import {MessageEntity} from './channel/entities/message.entity';
 import {UserInfoMiddleware} from './auth/auth.middleware';
 import {SocketModule} from './socket/socket.module';
@@ -28,7 +27,7 @@ import {SocketModule} from './socket/socket.module';
             username: process.env.DB_USERNAME,
             password: process.env.DB_PASSWORD,
             database: process.env.DB_NAME,
-            entities: [UserEntity, ChannelEntity, GameEntity, SanctionEntity, GameQueueEntity, MessageEntity],
+            entities: [UserEntity, ChannelEntity, GameEntity, SanctionEntity, MessageEntity],
             // synchronize: true => dev only
             synchronize: true,
         }),
