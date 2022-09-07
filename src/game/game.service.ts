@@ -5,6 +5,7 @@ import {GameEntity} from './entities/game.entity';
 import {Game} from './entities/game.entity';
 import {Ball} from './entities/game.entity';
 import {Pad} from './entities/game.entity';
+import {PadMove} from './entities/game.entity';
 import {scoreMax} from "lib/index";
 import {interval} from "rxjs";
 
@@ -42,6 +43,7 @@ export class GameService {
         game.padRight.speed = 1;
         game.padRight.height = 15;
         game.padRight.width = 1.25;
+        game.padRight.move = PadMove.STATIC;
     }
 
     checkWalls(ball: Ball) {
@@ -115,6 +117,14 @@ export class GameService {
         this.checkPadRight(game);
         game.ball.x += game.ball.velocityX;
         game.ball.y += game.ball.velocityY;
+        if (game.padLeft.move === PadMove.UP)
+            this.padUp(game.padLeft);
+        else if (game.padLeft.move === PadMove.DOWN)
+            this.padDown(game.padLeft);
+        if (game.padRight.move === PadMove.UP)
+            this.padUp(game.padRight);
+        else if (game.padRight.move === PadMove.DOWN)
+            this.padDown(game.padRight);
     }
 
     padUp(pad: Pad) {
@@ -131,10 +141,10 @@ export class GameService {
             pad.y += pad.speed;
     }
 
-    startNewGame() {
+    async startNewGame() {
         let game:Game;
         this.gameInit(game);
-        //TODO: what start the party? the first pad move?
+        await new Promise(resolve => setTimeout(resolve, 3000));
         game.interval = setInterval(() => this.gameLoop(game), 16);
     }
 

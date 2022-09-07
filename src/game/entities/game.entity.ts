@@ -1,5 +1,5 @@
 import {UserEntity} from "src/users/entities/user.entity";
-import {Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn} from "typeorm";
+import {Column, Entity, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
 
 export type Ball = {
     x: number;
@@ -16,6 +16,7 @@ export type Pad = {
     height: number;
     width: number;
     speed: number;
+    move: number;
 }
 
 export type Game = {
@@ -31,6 +32,12 @@ export enum GameStatus {
     PENDING = 0,
     RUNNING = 1,
     FINISHED = 2,
+}
+
+export enum PadMove {
+    UP = -1,
+    STATIC,
+    DOWN,
 }
 
 export enum GameType {
