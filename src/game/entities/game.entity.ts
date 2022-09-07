@@ -1,21 +1,30 @@
 import {UserEntity} from "src/users/entities/user.entity";
 import {Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn} from "typeorm";
 
+export type Ball = {
+    x: number;
+    y: number;
+    speed: number;
+    velocityX: number;
+    velocityY: number;
+    span: number;
+}
+
+export type Pad = {
+    x: number;
+    y: number;
+    height: number;
+    width: number;
+    speed: number;
+}
 
 export type Game = {
+    interval;
     p1Score: number;
     p2Score: number;
-    ballX: number;
-    ballY: number;
-    ballSpeed: number;
-    ballVelocityX: number;
-    ballVelocityY: number;
-    padLeftX: number;
-    padLeftY: number;
-    padLeftVelocity: number;
-    padRightX: number;
-    padRightY: number;
-    padRightVelocity: number;
+    ball: Ball;
+    padLeft: Pad;
+    padRight: Pad;
 }
 
 export enum GameStatus {
