@@ -70,7 +70,6 @@ export class UsersService {
         if (!userResult) {
             return failureMResponse("Invalid user");
         }
-        console.debug(userResult.img_path, path);
 
         const newPath = path.replace('.tmp', '');
         try {
