@@ -1071,7 +1071,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        client.emit('success', r.payload);
+        client.emit('game_queued', { type: data.type });
 
         const r2 = await this.socketService.checkMatch();
 
@@ -1081,7 +1081,56 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        console.log("Found game for user!");
+        const [socket1, socket2] = r2.payload.map(g => this.getSocketFromUserId(g.player.id));
+
+        if (!socket1 || !socket2) {
+            console.log("What? Someone is offline??");
+        }
+
+        const gameId = [r2.payload[0].player.id, r2.payload[1].player.id].sort().join('_');
+
+        socket1.join(`game_${gameId}`);
+        socket2.join(`game_${gameId}`);
+ 
+        this.server.to(`game_${gameId}`).emit('success', `Found opponent! Started game with ID: ${gameId}`);
+    }
+
+    getSocketFromUserId(userId: number) {
+        const user = this.socketService.getUserKVByUserId(userId);
+
+        if (!user)
+            return null;
+        return this.getSocketFromSocketId(user[0]);
+    }
+
+    getSocketFromSocketId(socketId: string) {
+        return this.server.sockets.sockets.get(socketId);
+    }
+
+    @SubscribeMessage('delQueue')
+    async cancelMatch(
+        @ConnectedSocket() client: Socket,
+    ) {
+        if (!client) {
+            client.emit('error', "What????");
+            return;
+        }
+
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user) {
+            client.emit('error', 'Invalid user');
+            return;
+        }
+        
+        const r = this.socketService.cancelMatchmakingFor(user.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        client.emit('game_unqueued');
     }
 
 

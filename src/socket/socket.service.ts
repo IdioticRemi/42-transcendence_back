@@ -90,15 +90,26 @@ export class SocketService {
         return this.users.get(socketId);
     }
 
-    disconnectUser(socketId: string) {
-        const user = this.getConnectedUser(socketId);
+    cancelMatchmakingFor(userId: number) {
+        const user = this.getConnectedUserById(userId);
 
         if (user) {
-            if (this.matchmakingClassic.includes(user.id))
+            if (this.matchmakingClassic.includes(user.id)) {
                 this.matchmakingClassic = this.matchmakingClassic.filter(p => p !== user.id);
-            if (this.matchmakingCustom.includes(user.id))
+                return successMResponse(true);
+            }
+            if (this.matchmakingCustom.includes(user.id)) {
                 this.matchmakingCustom = this.matchmakingCustom.filter(p => p !== user.id);
+                return successMResponse(true);
+            }
+            return failureMResponse("User is not queued up");
         }
+
+        return failureMResponse("User is not connected????");
+    }
+
+    disconnectUser(socketId: string) {
+        this.cancelMatchmakingFor(this.getConnectedUser(socketId)?.id);
 
         this.users.delete(socketId);
     }
@@ -111,16 +122,16 @@ export class SocketService {
         
         if (type === GameType.CLASSIC) {
             this.matchmakingClassic.push(userId);
-            return successMResponse("Queued for a classic game");
+            return successMResponse(true);
         }
         if (type === GameType.CUSTOM) {
             this.matchmakingCustom.push(userId);
-            return successMResponse("Queued for a custom game");
+            return successMResponse(true);
         }
         return failureMResponse("Unknown game type");
     }
 
-    async checkMatch() {
+    async checkMatch(): Promise<MResponse<GameEntity[]>> {
         if (this.matchmakingClassic.length > 1) {
             return await this.matchmake(GameType.CLASSIC);
         }
@@ -130,7 +141,7 @@ export class SocketService {
         return failureMResponse("");
     }
 
-    async matchmake(type: GameType): Promise<MResponse<[GameEntity, GameEntity]>> {
+    async matchmake(type: GameType): Promise<MResponse<GameEntity[]>> {
         
         const queue = type === GameType.CLASSIC ? this.matchmakingClassic : this.matchmakingCustom;
         
