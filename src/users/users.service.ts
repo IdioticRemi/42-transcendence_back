@@ -68,7 +68,7 @@ export class UsersService {
         // checks if previous uploaded avatar and filename is different
         const userResult = await this.getUserByUsername(user);
         if (!userResult) {
-            return failureMResponse("User does not exist? (what ???)");
+            return failureMResponse("Invalid user");
         }
         if (userResult.img_path !== defaultAvatar && userResult.img_path !== path) {
             // delete previous avatar

@@ -1,4 +1,5 @@
 import { Exclude, Expose, Type } from "class-transformer";
+import { defaultAvatar } from "lib";
 import {ChannelEntity} from "src/channel/entities/channel.entity";
 import {GameEntity} from "src/game/entities/game.entity";
 import {
@@ -27,7 +28,7 @@ export class UserEntity {
     token: string;
 
     @Column({
-        default: "img/default_avatar.jpg"
+        default: defaultAvatar
     })
     img_path: string;
 
