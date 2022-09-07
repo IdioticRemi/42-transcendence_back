@@ -24,6 +24,11 @@ export interface Game {
     spectators: number[];
 }
 
+export interface Invite {
+    id: number;
+    type: GameType;
+}
+
 @Injectable()
 export class SocketService {
 
@@ -31,7 +36,7 @@ export class SocketService {
     private messages: Map<string, {friendId: number, userId: number, userNick: string, content: string}[]>;
     private matchmakingClassic: number[];
     private matchmakingCustom: number[];
-    private invites: Map<number, number[]>; // Map.get(userID) returns every userID that invited him
+    private invites: Map<number, Invite[]>; // Map.get(userID) returns every userID that invited him
     private games: [];
 
     constructor(
@@ -93,6 +98,10 @@ export class SocketService {
         return this.users.get(socketId);
     }
 
+    getConnectedUserByNick(nick: string) {
+        return [...this.users.values()].find((u) => u.nickname === nick);
+    }
+
     cancelMatchmakingFor(userId: number) {
         const user = this.getConnectedUserById(userId);
 
@@ -113,8 +122,8 @@ export class SocketService {
 
     disconnectUser(socketId: string) {
         this.cancelMatchmakingFor(this.getConnectedUser(socketId)?.id);
-
-        // this.invites.delete();
+        
+        this.invites.delete(this.getConnectedUser(socketId)?.id);
         this.users.delete(socketId);
     }
 
@@ -181,5 +190,55 @@ export class SocketService {
 
     isUserOnline(userId: number): boolean {
         return (!!this.getConnectedUserById(userId));
+    }
+
+    getInvites(userId: number) {
+        return this.invites.get(userId);
+    }
+
+    inviteUser(myUserId: number, targetUserId: number, type: GameType): MResponse<boolean> {
+        if (!this.isUserOnline(targetUserId))
+            return failureMResponse("Target is offline");
+        
+        const targetInvites = this.invites.get(targetUserId);
+
+        if (targetInvites.find(i => i.id === myUserId))
+            return failureMResponse("You already invited this user");
+
+        targetInvites.push({ id: myUserId, type });
+
+        return successMResponse(true);
+    }
+
+    uninviteUser(myUserId: number, targetUserId: number): MResponse<Invite> {
+        if (!this.isUserOnline(targetUserId))
+            return failureMResponse("Target is offline");
+        
+        const targetInvites = this.invites.get(targetUserId);
+
+        if (!targetInvites.find(i => i.id === myUserId))
+            return failureMResponse("You haven't invited this user");
+
+        const deleted = targetInvites.find(i => i.id === myUserId);
+
+        this.invites.set(targetUserId, targetInvites.filter(i => i.id !== myUserId));
+
+        return successMResponse(deleted);
+    }
+
+    deleteInvite(myUserId: number, targetUserId: number): MResponse<Invite> {
+        if (!this.isUserOnline(targetUserId))
+            return failureMResponse("Target is offline");
+        
+        const myInvites = this.invites.get(myUserId);
+
+        if (!myInvites.find(i => i.id === targetUserId))
+            return failureMResponse("This user didn't invite you");
+
+        const deleted = myInvites.find(i => i.id === targetUserId);
+
+        this.invites.set(myUserId, myInvites.filter(i => i.id !== targetUserId));
+
+        return successMResponse(deleted);
     }
 }

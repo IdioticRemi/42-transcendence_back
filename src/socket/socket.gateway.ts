@@ -12,7 +12,7 @@ import {Server, Socket} from 'socket.io';
 import {ChannelService} from 'src/channel/channel.service';
 import {AddMessageEntityDto} from 'src/channel/dto/message.dto';
 import {UsersService} from 'src/users/users.service';
-import {SocketService} from './socket.service';
+import {Invite, SocketService} from './socket.service';
 import * as argon2 from "argon2";
 import {SanctionType} from "../channel/entities/sanction.entity";
 import {Repository} from "typeorm";
@@ -21,6 +21,7 @@ import {InjectRepository} from "@nestjs/typeorm";
 import {ChannelDto} from 'src/channel/dto/channel.dto';
 import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
+import { UserEntity } from 'src/users/entities/user.entity';
 
 export class UserPermission {
     id: number;
@@ -1020,7 +1021,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
     }
 
-    sendSocketMsgByUserId(userId: number, event: string, payload: any) {
+    sendSocketMsgByUserId(userId: number, event: string, payload: any = null) {
         const client = this.socketService.getUserKVByUserId(userId);
         const isClientOnline = !!client;
 
@@ -1093,6 +1094,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         socket2.join(`game_${gameId}`);
  
         this.server.to(`game_${gameId}`).emit('success', `Found opponent! Started game with ID: ${gameId}`);
+        this.server.to(`game_${gameId}`).emit('game_found');
     }
 
     getSocketFromUserId(userId: number) {
@@ -1111,11 +1113,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async cancelMatch(
         @ConnectedSocket() client: Socket,
     ) {
-        if (!client) {
-            client.emit('error', "What????");
-            return;
-        }
-
         const user = this.socketService.getConnectedUser(client.id);
 
         if (!user) {
@@ -1133,8 +1130,116 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('game_unqueued');
     }
 
+    @SubscribeMessage('game_invite')
+    async inviteUser(
+        @MessageBody() data: { nickname: string, type: GameType },
+        @ConnectedSocket() client: Socket,
 
-    
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('nickname' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
 
+        const target = this.socketService.getConnectedUserByNick(data.nickname);
+        
+        const r = this.socketService.inviteUser(user.id, target?.id, data.type);
 
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        const invite = this.socketService.getInvites(target.id).find(i => i.id === user.id);
+
+        client.emit('game_invite_sent', { ...invite, nickname: target.nickname });
+        this.sendSocketMsgByUserId(target.id, 'game_invite', { ...invite, nickname: user.nickname });
+    }
+
+    @SubscribeMessage('game_uninvite')
+    async uninviteUser(
+        @MessageBody() data: { nickname: string, type: GameType },
+        @ConnectedSocket() client: Socket,
+
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('nickname' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
+
+        const target = this.socketService.getConnectedUserByNick(data.nickname);
+        
+        const r = this.socketService.uninviteUser(user.id, target?.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        client.emit('game_invite_cancel', { ...r.payload, nickname: target.nickname });
+        this.sendSocketMsgByUserId(target.id, 'game_invite_del', { ...r.payload, nickname: user.nickname });
+        this.sendSocketMsgByUserId(target.id, 'warning', `${user.nickname} cancelled their invitation`);
+    }
+
+    @SubscribeMessage('game_invite_accept')
+    async acceptInvite(
+        @MessageBody() data: Invite,
+        @ConnectedSocket() client: Socket,
+
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('id' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
+
+        const target = this.socketService.getConnectedUserById(data.id);
+        
+        const r = this.socketService.deleteInvite(user.id, target?.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        // Notify and remove invite from store
+        client.emit('success', `You accepted ${target.nickname}'s invite`);
+        client.emit('game_invite_del', { ...r.payload, nickname: user.nickname });
+        this.sendSocketMsgByUserId(target.id, 'success', `${user.nickname} accepted your invite`);
+        this.sendSocketMsgByUserId(target.id, 'game_invite_accepted', { ...r.payload, nickname: user.nickname });
+
+        // Stop queue animation and send to game page??
+        client.emit('game_found');
+        this.sendSocketMsgByUserId(target.id, 'game_found');
+    }
+
+    @SubscribeMessage('game_invite_refuse')
+    async refuseInvite(
+        @MessageBody() data: Invite,
+        @ConnectedSocket() client: Socket,
+
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('id' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
+
+        const target = this.socketService.getConnectedUserById(data.id);
+        
+        const r = this.socketService.deleteInvite(user.id, target?.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        // Notify and remove invite from store
+        client.emit('success', `You refused ${target.nickname}'s invite`);
+        client.emit('game_invite_del', { ...r.payload, nickname: user.nickname });
+        this.sendSocketMsgByUserId(target.id, 'warning', `${user.nickname} refused your invite`);
+        this.sendSocketMsgByUserId(target.id, 'game_invite_refused', { ...r.payload, nickname: user.nickname });
+    }
 }
