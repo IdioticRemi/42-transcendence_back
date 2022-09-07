@@ -21,7 +21,6 @@ import {InjectRepository} from "@nestjs/typeorm";
 import {ChannelDto} from 'src/channel/dto/channel.dto';
 import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
-import { CONFIGURABLE_MODULE_ID } from '@nestjs/common/module-utils/constants';
 
 export class UserPermission {
     id: number;
@@ -78,7 +77,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const user = await this.userService.getUserByToken(
-            client.handshake.headers.authorization, ['friends', 'blocked', 'channels']
+            client.handshake.headers.authorization, ['friends', 'blocked', 'channels', 'channels.messages']
         );
 
         if (!user) {
@@ -102,6 +101,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         user.channels.forEach(c => {
             client.join(`channel_${c.id}`);
+            client.emit('channel_info', plainToClass(ChannelDto, c, {excludeExtraneousValues: true}));
         })
     }
 
@@ -128,7 +128,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
 
         if (!user) {
-            client.emit('error', 'Invalid user');
+            client.emit('error', 'Invalid user CHAN_LIST');
             return;
         }
 
@@ -1049,7 +1049,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return users;
     }
 
-    @SubscribeMessage('addQueue')
+    @SubscribeMessage('game_add_queue')
     async requestMatch(
         @MessageBody() data: { type: GameType },
         @ConnectedSocket() client: Socket,
@@ -1060,7 +1060,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
         const user = this.socketService.getConnectedUser(client.id)
         if (!user) {
-            client.emit('error', 'Invalid user');
+            client.emit('error', 'Invalid user GAME_ADD_QUEUE');
             return ;
         }
         console.debug(`game requested for ${user.nickname}`);
@@ -1107,7 +1107,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return this.server.sockets.sockets.get(socketId);
     }
 
-    @SubscribeMessage('delQueue')
+    @SubscribeMessage('game_del_queue')
     async cancelMatch(
         @ConnectedSocket() client: Socket,
     ) {
@@ -1119,7 +1119,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
 
         if (!user) {
-            client.emit('error', 'Invalid user');
+            client.emit('error', 'Invalid user GAME_DEL_QUEUE');
             return;
         }
         

@@ -70,15 +70,17 @@ export class UsersService {
         if (!userResult) {
             return failureMResponse("Invalid user");
         }
-        if (userResult.img_path !== defaultAvatar && userResult.img_path !== path) {
-            // delete previous avatar
-            try {
+        console.debug(userResult.img_path, path);
+
+        const newPath = path.replace('.tmp', '');
+        try {
+            if (newPath.split('.').reverse()[0] !== userResult.img_path.split('.').reverse()[0])
                 fs.unlinkSync(userResult.img_path);
-            } catch {}
-        }
+            fs.renameSync(path, newPath);
+        } catch {}
         
         // register new avatar's path in DB
-        return await this.usersRepository.update({username: user}, {img_path: path}).then(() => {
+        return await this.usersRepository.update({username: user}, {img_path: newPath}).then(() => {
             return successMResponse(true);
         }).catch((e) => {
             return failureMResponse("failed to save to database");

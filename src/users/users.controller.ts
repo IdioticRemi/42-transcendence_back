@@ -58,15 +58,12 @@ export class UsersController {
         storage: diskStorage({
             destination: './uploads',
             filename: function (req, file, cb) {
-                console.log(req.user);
-                cb(null, req.user.username + extname(file.originalname).toLowerCase());
+                cb(null, req.user.username + extname(file.originalname).toLowerCase() + '.tmp');
             }
         }),
         limits: {fileSize: maxUploadSize},
         fileFilter: function fileFilter(req, file, cb) {
-            console.debug("running test...");
             if (file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg') {
-                console.debug("wrong file type");
                 return cb(new UnsupportedMediaTypeException('Only jpg/jpeg or png files are accepted'), false);
             }
             cb(null, true);

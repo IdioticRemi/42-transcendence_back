@@ -31,6 +31,7 @@ export class SocketService {
     private messages: Map<string, {friendId: number, userId: number, userNick: string, content: string}[]>;
     private matchmakingClassic: number[];
     private matchmakingCustom: number[];
+    private invites: Map<number, number[]>; // Map.get(userID) returns every userID that invited him
     private games: [];
 
     constructor(
@@ -40,6 +41,7 @@ export class SocketService {
     ) {
         this.users = new Map();
         this.messages = new Map();
+        this.invites = new Map();
         this.matchmakingClassic = [];
         this.matchmakingCustom = [];
     }
@@ -84,6 +86,7 @@ export class SocketService {
 
     connectUser(socketId: string, user: UserEntity) {
         this.users.set(socketId, user);
+        this.invites.set(user.id, []);
     }
 
     getConnectedUser(socketId: string) {
@@ -111,6 +114,7 @@ export class SocketService {
     disconnectUser(socketId: string) {
         this.cancelMatchmakingFor(this.getConnectedUser(socketId)?.id);
 
+        // this.invites.delete();
         this.users.delete(socketId);
     }
 
