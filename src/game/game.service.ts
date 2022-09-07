@@ -16,7 +16,7 @@ export class GameService {
         private gameRepository: Repository<GameEntity>,
     ) {
     }
-    //800 / 600
+
     gameInit(game: Game) {
         game.p1Score = 0;
         game.p2Score = 0;
@@ -38,6 +38,7 @@ export class GameService {
         game.padLeft.speed = 1;
         game.padLeft.height = 15;
         game.padLeft.width = 1.25;
+        game.padLeft.move = PadMove.STATIC;
         game.padRight.x = 97.5;
         game.padRight.y = 50;
         game.padRight.speed = 1;
