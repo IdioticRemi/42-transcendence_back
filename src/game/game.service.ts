@@ -92,17 +92,17 @@ export class GameService {
     checkWin(game: Game) {
         if (game.ball.x <= 0) {
             game.p2Score++;
+            this.updateDbScore(game);
             if (game.p2Score !== scoreMax) {
                 game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
-                this.updateDbScore(game);
                 this.setInit(game);
             }
         }
         else if (game.ball.x + game.ball.size >= 100) {
             game.p1Score++;
+            this.updateDbScore(game);
             if (game.p1Score !== scoreMax) {
                 game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
-                this.updateDbScore(game);
                 this.setInit(game);
             }
         }
@@ -115,7 +115,6 @@ export class GameService {
             const winner = game.p1Score === scoreMax ? game.p1 : game.p2;
             const winnerScore = Math.max(game.p1Score, game.p2Score);
             const loserScore = Math.min(game.p1Score, game.p2Score);
-            await this.updateDbScore(game);
             game.server.to(`game_${game.id}`).emit('success', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
             return;
         }
