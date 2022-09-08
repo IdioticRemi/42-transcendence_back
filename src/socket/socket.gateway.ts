@@ -1210,6 +1210,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
+        const r2 = await this.socketService.createGame(user, target, data.type);
+
+        if (r2.status !== 'success') {
+            client.emit('error', r2.message);
+            return;
+        }
+
+        const gameId = [r2.payload[0].player.id, r2.payload[1].player.id].sort().join('_');
+
+        client.join(`game_${gameId}`);
+        this.getSocketFromUserId(target.id)?.join(`game_${gameId}`);
+
         // Notify and remove invite from store
         client.emit('success', `You accepted ${target.nickname}'s invite`);
         client.emit('game_invite_del', { ...r.payload, nickname: user.nickname });
@@ -1217,8 +1229,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.sendSocketMsgByUserId(target.id, 'game_invite_accepted', { ...r.payload, nickname: user.nickname });
 
         // Stop queue animation and send to game page??
-        client.emit('game_found');
-        this.sendSocketMsgByUserId(target.id, 'game_found');
+        this.server.to(`game_${gameId}`).emit('success', 'CREATED GAME WITH ID: ' + gameId);
+        this.server.to(`game_${gameId}`).emit('game_found');
     }
 
     @SubscribeMessage('game_invite_refuse')

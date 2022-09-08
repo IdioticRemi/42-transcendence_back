@@ -37,7 +37,7 @@ export class SocketService {
     private matchmakingClassic: number[];
     private matchmakingCustom: number[];
     private invites: Map<number, Invite[]>; // Map.get(userID) returns every userID that invited him
-    private games: [];
+    private games: Map<string, Game | null>;
 
     constructor(
         private userService: UsersService,
@@ -47,6 +47,7 @@ export class SocketService {
         this.users = new Map();
         this.messages = new Map();
         this.invites = new Map();
+        this.games = new Map();
         this.matchmakingClassic = [];
         this.matchmakingCustom = [];
     }
@@ -163,6 +164,18 @@ export class SocketService {
         if (!p1 || !p2)
             return failureMResponse("a user is not online");
         
+        return await this.createGame(p1, p2, type);
+    }
+
+    async createGame(p1: UserEntity, p2: UserEntity, type: GameType): Promise<MResponse<GameEntity[]>> {
+        if (![GameType.CLASSIC, GameType.CUSTOM].includes(type))
+            return failureMResponse("Invalid game type");
+
+        const gameId = [p1.id, p2.id].sort().join('_');
+
+        if (this.games.has(gameId))
+            return failureMResponse("A game with the same players is already running");
+        
         let gameP1 = this.gameRepository.create({
             player: p1,
             opponent: p2,
@@ -173,12 +186,17 @@ export class SocketService {
             opponent: p1,
             type
         });
+        
         if (!gameP1 || !gameP2) {
             return failureMResponse("could not create database objects");
         }
-        gameP1 = await this.gameRepository.save(gameP1).catch((e) => {console.debug(e); return null})
+
+        gameP1 = await this.gameRepository.save(gameP1)
+            .catch((e) => {console.debug(e); return null});
+
         try {
             gameP2 = await this.gameRepository.save(gameP2);
+            this.games.set(gameId, null);
         } catch (e) {
             console.debug(e);
             await this.gameRepository.delete(gameP1.id);
