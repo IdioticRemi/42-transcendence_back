@@ -1,3 +1,4 @@
+import { Server } from "socket.io";
 
 export const scoreMax = 3;
 export const startTime = 3000;
@@ -64,8 +65,11 @@ export class Game {
   ball: Ball;
   padLeft: Pad;
   padRight: Pad;
+  server: Server;
+  
 
-  constructor() {
+  constructor(server: Server) {
+    this.server = server;
     this.interval = null;
     this.p1Score = 0;
     this.p2Score = 0;

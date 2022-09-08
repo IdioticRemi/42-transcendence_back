@@ -167,4 +167,12 @@ export class SocketService {
     isUserOnline(userId: number): boolean {
         return (!!this.getConnectedUserById(userId));
     }
+
+    movePlayer(userId: number): MResponse<boolean> {
+        
+        const game  = this.games.find((g) => g.p1 == userId || g.p2 == userId);
+        if (!game) {
+            return failureMResponse("no game found for this user");
+        }
+    }
 }

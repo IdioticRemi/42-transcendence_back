@@ -22,6 +22,7 @@ import {ChannelDto} from 'src/channel/dto/channel.dto';
 import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
 import { CONFIGURABLE_MODULE_ID } from '@nestjs/common/module-utils/constants';
+import { PadMove } from 'src/game/lib/game';
 
 export class UserPermission {
     id: number;
@@ -1085,6 +1086,30 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
 
+    @SubscribeMessage('game_key_down')
+    async gameMove(
+        @MessageBody() data: { key: string },
+        @ConnectedSocket() client: Socket,
+    ) {
+        if (!client || !("type" in data)) {
+            client.emit('error', "Invalid data");
+            return ;
+        }
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user) {
+            client.emit('error', 'Invalid user');
+            return ;
+        }
+
+        if (data.key !== 'ArrowUp' && data.key !== 'ArrowDown') {
+            console.debug("wrong key press !");
+            return;
+        }
+
+        const r = this.socketService.movePlayer(user.id);
+        console.debug(`${user.nickname} moves ${data.key}`);
+
+    }
     
 
 
