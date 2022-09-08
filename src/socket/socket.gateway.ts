@@ -22,6 +22,7 @@ import {ChannelDto} from 'src/channel/dto/channel.dto';
 import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
 import { UserEntity } from 'src/users/entities/user.entity';
+import { MsgMaxSize } from 'lib';
 
 export class UserPermission {
     id: number;
@@ -463,6 +464,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!user || !('channelId' in data) || !('content' in data) || /^\s*$/.test(data.content)) {
             client.emit('error', `Invalid data or empty message`);
+            return;
+        }
+
+        if (data.content.length > MsgMaxSize) {
+            client.emit("error", `You cannot send more than ${MsgMaxSize} characters`);
             return;
         }
 
