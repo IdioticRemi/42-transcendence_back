@@ -8,6 +8,7 @@ import {Pad} from './lib/game';
 import {PadMove} from './lib/game';
 import {scoreMax} from "./lib/game";
 import {startTime} from "./lib/game";
+import {gameFps} from "./lib/game";
 import {ballStartX} from "./lib/game";
 import {ballStartY} from "./lib/game";
 import {ballSpeed} from "./lib/game";
@@ -38,7 +39,7 @@ export class GameService {
         game.ball.x = ballStartX;
         game.ball.y = ballStartY;
         game.ball.speed = ballSpeed;
-        game.ball.span = ballSpan;
+        game.ball.size = ballSpan;
         if (game.p2Score > game.p1Score)
             game.ball.velocityX = game.ball.speed * Math.cos(Math.PI / 4);
         else
@@ -63,17 +64,17 @@ export class GameService {
     checkWalls(ball: Ball) {
         if (
             (ball.y <= 0 && ball.velocityY < 0) ||
-            (ball.y + ball.span >= 100 && ball.velocityY > 0)
+            (ball.y + ball.size >= 100 && ball.velocityY > 0)
         )
             ball.velocityY = -ball.velocityY;
     }
 
     checkPad(pad: Pad, ball: Ball) {
         if (
-          ball.y + ball.span > pad.y &&
+          ball.y + ball.size > pad.y &&
           ball.y < pad.y + pad.height
         ) {
-            const collidePoint = ball.y + ball.span / 2 -
+            const collidePoint = ball.y + ball.size / 2 -
               (pad.y + pad.height / 2);
 
             ball.velocityX = Math.abs(ball.speed *
@@ -92,7 +93,7 @@ export class GameService {
             if (game.p2Score !== scoreMax)
                 this.setInit(game);
         }
-        else if (game.ball.x + game.ball.span >= 100) {
+        else if (game.ball.x + game.ball.size >= 100) {
             game.p1Score++;
             if (game.p1Score !== scoreMax)
                 this.setInit(game);
@@ -110,7 +111,7 @@ export class GameService {
         if (game.ball.x <= game.padLeft.x + game.padLeft.width && game.ball.velocityX < 0) {
             this.checkPad(game.padLeft, game.ball);
         }
-        if (game.ball.x + game.ball.span >= game.padRight.x + game.padLeft.width && game.ball.velocityX > 0) {
+        if (game.ball.x + game.ball.size >= game.padRight.x + game.padLeft.width && game.ball.velocityX > 0) {
             this.checkPad(game.padRight, game.ball);
         }
         game.ball.x += game.ball.velocityX;
@@ -141,10 +142,10 @@ export class GameService {
     }
 
     async startNewGame() {
-        let game = {} as Game;
+        const game = new Game();
         this.gameInit(game);
         await new Promise(resolve => setTimeout(resolve, startTime));
-        game.interval = setInterval(() => this.gameLoop(game), 16);
+        game.interval = setInterval(() => this.gameLoop(game), 1000/gameFps);
     }
 
 
