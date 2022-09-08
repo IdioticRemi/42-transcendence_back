@@ -2,13 +2,23 @@ import {Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {Repository} from 'typeorm';
 import {GameEntity} from './entities/game.entity';
-import {Game} from './entities/game.entity';
-import {Ball} from './entities/game.entity';
-import {Pad} from './entities/game.entity';
-import {PadMove} from './entities/game.entity';
-import {scoreMax} from "lib/game";
-import {startTime} from "lib/game";
-import {interval} from "rxjs";
+import {Game} from './lib/game';
+import {Ball} from './lib/game';
+import {Pad} from './lib/game';
+import {PadMove} from './lib/game';
+import {scoreMax} from "./lib/game";
+import {startTime} from "./lib/game";
+import {ballStartX} from "./lib/game";
+import {ballStartY} from "./lib/game";
+import {ballSpeed} from "./lib/game";
+import {ballSpan} from "./lib/game";
+import {ballSpeedInc} from "./lib/game";
+import {padLeftStartX} from "./lib/game";
+import {padRightStartX} from "./lib/game";
+import {padStartY} from "./lib/game";
+import {padSpeed} from "./lib/game";
+import {padHeight} from "./lib/game";
+import {padWidth} from "./lib/game";
 
 @Injectable()
 export class GameService {
@@ -25,27 +35,29 @@ export class GameService {
     }
 
     setInit(game: Game) {
-        game.ball.x = 50;
-        game.ball.y = 6.67;
-        game.ball.speed = 1;
-        game.ball.span = 2.5;
+        game.ball.x = ballStartX;
+        game.ball.y = ballStartY;
+        game.ball.speed = ballSpeed;
+        game.ball.span = ballSpan;
         if (game.p2Score > game.p1Score)
             game.ball.velocityX = game.ball.speed * Math.cos(Math.PI / 4);
         else
             game.ball.velocityX = -game.ball.speed * Math.cos(Math.PI / 4);
         game.ball.velocityY = game.ball.speed * Math.sin(Math.PI / 4);
-        game.padLeft.x = 2.5;
-        game.padLeft.y = 50;
-        game.padLeft.speed = 1;
-        game.padLeft.height = 15;
-        game.padLeft.width = 1.25;
-        game.padLeft.move = PadMove.STATIC;
-        game.padRight.x = 97.5;
-        game.padRight.y = 50;
-        game.padRight.speed = 1;
-        game.padRight.height = 15;
-        game.padRight.width = 1.25;
-        game.padRight.move = PadMove.STATIC;
+        this.padInit(game.padLeft, 1);
+        this.padInit(game.padRight, 2);
+    }
+
+    padInit(pad: Pad, side: number) {
+        if (side === 1)
+            pad.x = padLeftStartX;
+        else
+            pad.x = padRightStartX;
+        pad.y = padStartY;
+        pad.speed = padSpeed;
+        pad.height = padHeight;
+        pad.width = padWidth;
+        pad.move = PadMove.STATIC;
     }
 
     checkWalls(ball: Ball) {
@@ -70,7 +82,7 @@ export class GameService {
             ball.velocityX = Math.abs(ball.speed *
               Math.sin((collidePoint * Math.PI) / 4 / (pad.height / 2)));
 
-            ball.speed += 0.2;
+            ball.speed += ballSpeedInc;
         }
     }
 
@@ -91,6 +103,8 @@ export class GameService {
         this.checkWin(game);
         if (game.p1Score === scoreMax || game.p2Score === scoreMax) {
             clearInterval(game.interval);
+            //TODO: send victory and saving in database history
+            return;
         }
         this.checkWalls(game.ball);
         if (game.ball.x <= game.padLeft.x + game.padLeft.width && game.ball.velocityX < 0) {
@@ -109,6 +123,7 @@ export class GameService {
             this.padUp(game.padRight);
         else if (game.padRight.move === PadMove.DOWN)
             this.padDown(game.padRight);
+        //TODO: send new pos for front
     }
 
     padUp(pad: Pad) {
@@ -126,7 +141,7 @@ export class GameService {
     }
 
     async startNewGame() {
-        let game:Game;
+        let game = {} as Game;
         this.gameInit(game);
         await new Promise(resolve => setTimeout(resolve, startTime));
         game.interval = setInterval(() => this.gameLoop(game), 16);
