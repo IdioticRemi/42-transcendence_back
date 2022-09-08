@@ -6,7 +6,8 @@ import {Game} from './entities/game.entity';
 import {Ball} from './entities/game.entity';
 import {Pad} from './entities/game.entity';
 import {PadMove} from './entities/game.entity';
-import {scoreMax} from "lib/index";
+import {scoreMax} from "lib/game";
+import {startTime} from "lib/game";
 import {interval} from "rxjs";
 
 @Injectable()
@@ -55,43 +56,21 @@ export class GameService {
             ball.velocityY = -ball.velocityY;
     }
 
-    checkPadLeft(game: Game) {
-        if (game.ball.x <= game.padLeft.x + game.padLeft.width && game.ball.velocityX < 0) {
-            if (
-                game.ball.y + game.ball.span > game.padLeft.y &&
-                game.ball.y < game.padLeft.y + game.padLeft.height
-            ) {
-                const collidePoint = game.ball.y + game.ball.span / 2 -
-                (game.padLeft.y + game.padLeft.height / 2);
+    checkPad(pad: Pad, ball: Ball) {
+        if (
+          ball.y + ball.span > pad.y &&
+          ball.y < pad.y + pad.height
+        ) {
+            const collidePoint = ball.y + ball.span / 2 -
+              (pad.y + pad.height / 2);
 
-                game.ball.velocityX = Math.abs(game.ball.speed *
-                Math.cos((collidePoint * Math.PI) / 4 / (game.padLeft.height / 2)));
+            ball.velocityX = Math.abs(ball.speed *
+              Math.cos((collidePoint * Math.PI) / 4 / (pad.height / 2)));
 
-                game.ball.velocityX = Math.abs(game.ball.speed *
-                Math.sin((collidePoint * Math.PI) / 4 / (game.padLeft.height / 2)));
+            ball.velocityX = Math.abs(ball.speed *
+              Math.sin((collidePoint * Math.PI) / 4 / (pad.height / 2)));
 
-                game.ball.speed += 0.2;
-            }
-        }
-    }
-
-    checkPadRight(game: Game) {
-        if (game.ball.x + game.ball.span >= game.padRight.x + game.padLeft.width && game.ball.velocityX > 0) {
-            if (
-                game.ball.y + game.ball.span > game.padRight.y &&
-                game.ball.y < game.padRight.y + game.padRight.height
-            ) {
-                const collidePoint = game.ball.y + game.ball.span / 2 -
-                    (game.padRight.y + game.padRight.height / 2);
-
-                game.ball.velocityX = Math.abs(game.ball.speed *
-                    Math.cos((collidePoint * Math.PI) / 4 / (game.padRight.height / 2)));
-
-                game.ball.velocityX = Math.abs(game.ball.speed *
-                    Math.sin((collidePoint * Math.PI) / 4 / (game.padRight.height / 2)));
-
-                game.ball.speed += 0.2;
-            }
+            ball.speed += 0.2;
         }
     }
 
@@ -114,8 +93,12 @@ export class GameService {
             clearInterval(game.interval);
         }
         this.checkWalls(game.ball);
-        this.checkPadLeft(game);
-        this.checkPadRight(game);
+        if (game.ball.x <= game.padLeft.x + game.padLeft.width && game.ball.velocityX < 0) {
+            this.checkPad(game.padLeft, game.ball);
+        }
+        if (game.ball.x + game.ball.span >= game.padRight.x + game.padLeft.width && game.ball.velocityX > 0) {
+            this.checkPad(game.padRight, game.ball);
+        }
         game.ball.x += game.ball.velocityX;
         game.ball.y += game.ball.velocityY;
         if (game.padLeft.move === PadMove.UP)
@@ -145,7 +128,7 @@ export class GameService {
     async startNewGame() {
         let game:Game;
         this.gameInit(game);
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, startTime));
         game.interval = setInterval(() => this.gameLoop(game), 16);
     }
 
