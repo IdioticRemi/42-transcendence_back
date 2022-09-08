@@ -66,9 +66,13 @@ export class Game {
   padLeft: Pad;
   padRight: Pad;
   server: Server;
+  p1: number;
+  p2: number;
+  spectactors: number[];
   
 
-  constructor(server: Server) {
+
+  constructor(server: Server, p1: number, p2: number) {
     this.server = server;
     this.interval = null;
     this.p1Score = 0;
@@ -76,6 +80,9 @@ export class Game {
     this.ball = new Ball();
     this.padLeft = new Pad();
     this.padRight = new Pad();
+    this.p1 = p1;
+    this.p2 = p2;
+    this.spectactors = [];
   }
 
 }

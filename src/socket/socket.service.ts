@@ -5,23 +5,11 @@ import {UserEntity} from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import {UsersService} from 'src/users/users.service';
 import { failureMResponse, MResponse, successMResponse } from 'lib/MResponse';
+import { Game } from 'src/game/lib/game';
 
-
-export interface Point {
-    x: number;
-    y: number;
-}
-
-export interface Game {
-    user1: number;
-    user2: number;
+export interface Invite {
+    id: number;
     type: GameType;
-    ballPos: Point;
-    pad1: Point;
-    pad2: Point;
-    p1Score: number;
-    p2Score: number;
-    spectators: number[];
 }
 
 @Injectable()
@@ -31,7 +19,8 @@ export class SocketService {
     private messages: Map<string, {friendId: number, userId: number, userNick: string, content: string}[]>;
     private matchmakingClassic: number[];
     private matchmakingCustom: number[];
-    private games: [];
+    private invites: Map<number, Invite[]>; // Map.get(userID) returns every userID that invited him
+    private games: Map<string, Game>;
 
     constructor(
         private userService: UsersService,
@@ -40,6 +29,8 @@ export class SocketService {
     ) {
         this.users = new Map();
         this.messages = new Map();
+        this.invites = new Map();
+        this.games = new Map();
         this.matchmakingClassic = [];
         this.matchmakingCustom = [];
     }
@@ -84,22 +75,39 @@ export class SocketService {
 
     connectUser(socketId: string, user: UserEntity) {
         this.users.set(socketId, user);
+        this.invites.set(user.id, []);
     }
 
     getConnectedUser(socketId: string) {
         return this.users.get(socketId);
     }
 
-    disconnectUser(socketId: string) {
-        const user = this.getConnectedUser(socketId);
+    getConnectedUserByNick(nick: string) {
+        return [...this.users.values()].find((u) => u.nickname === nick);
+    }
+
+    cancelMatchmakingFor(userId: number) {
+        const user = this.getConnectedUserById(userId);
 
         if (user) {
-            if (this.matchmakingClassic.includes(user.id))
+            if (this.matchmakingClassic.includes(user.id)) {
                 this.matchmakingClassic = this.matchmakingClassic.filter(p => p !== user.id);
-            if (this.matchmakingCustom.includes(user.id))
+                return successMResponse(true);
+            }
+            if (this.matchmakingCustom.includes(user.id)) {
                 this.matchmakingCustom = this.matchmakingCustom.filter(p => p !== user.id);
+                return successMResponse(true);
+            }
+            return failureMResponse("User is not queued up");
         }
 
+        return failureMResponse("User is not connected????");
+    }
+
+    disconnectUser(socketId: string) {
+        this.cancelMatchmakingFor(this.getConnectedUser(socketId)?.id);
+        
+        this.invites.delete(this.getConnectedUser(socketId)?.id);
         this.users.delete(socketId);
     }
 
@@ -111,16 +119,16 @@ export class SocketService {
         
         if (type === GameType.CLASSIC) {
             this.matchmakingClassic.push(userId);
-            return successMResponse("Queued for a classic game");
+            return successMResponse(true);
         }
         if (type === GameType.CUSTOM) {
             this.matchmakingCustom.push(userId);
-            return successMResponse("Queued for a custom game");
+            return successMResponse(true);
         }
         return failureMResponse("Unknown game type");
     }
 
-    async checkMatch() {
+    async checkMatch(): Promise<MResponse<GameEntity[]>> {
         if (this.matchmakingClassic.length > 1) {
             return await this.matchmake(GameType.CLASSIC);
         }
@@ -130,7 +138,7 @@ export class SocketService {
         return failureMResponse("");
     }
 
-    async matchmake(type: GameType): Promise<MResponse<[GameEntity, GameEntity]>> {
+    async matchmake(type: GameType): Promise<MResponse<GameEntity[]>> {
         
         const queue = type === GameType.CLASSIC ? this.matchmakingClassic : this.matchmakingCustom;
         
@@ -138,6 +146,18 @@ export class SocketService {
 
         if (!p1 || !p2)
             return failureMResponse("a user is not online");
+        
+        return await this.createGame(p1, p2, type);
+    }
+
+    async createGame(p1: UserEntity, p2: UserEntity, type: GameType): Promise<MResponse<GameEntity[]>> {
+        if (![GameType.CLASSIC, GameType.CUSTOM].includes(type))
+            return failureMResponse("Invalid game type");
+
+        const gameId = [p1.id, p2.id].sort().join('_');
+
+        if (this.games.has(gameId))
+            return failureMResponse("A game with the same players is already running");
         
         let gameP1 = this.gameRepository.create({
             player: p1,
@@ -149,12 +169,17 @@ export class SocketService {
             opponent: p1,
             type
         });
+        
         if (!gameP1 || !gameP2) {
             return failureMResponse("could not create database objects");
         }
-        gameP1 = await this.gameRepository.save(gameP1).catch((e) => {console.debug(e); return null})
+
+        gameP1 = await this.gameRepository.save(gameP1)
+            .catch((e) => {console.debug(e); return null});
+
         try {
             gameP2 = await this.gameRepository.save(gameP2);
+            this.games.set(gameId, null);
         } catch (e) {
             console.debug(e);
             await this.gameRepository.delete(gameP1.id);
@@ -168,9 +193,59 @@ export class SocketService {
         return (!!this.getConnectedUserById(userId));
     }
 
+    getInvites(userId: number) {
+        return this.invites.get(userId);
+    }
+
+    inviteUser(myUserId: number, targetUserId: number, type: GameType): MResponse<boolean> {
+        if (!this.isUserOnline(targetUserId))
+            return failureMResponse("Target is offline");
+        
+        const targetInvites = this.invites.get(targetUserId);
+
+        if (targetInvites.find(i => i.id === myUserId))
+            return failureMResponse("You already invited this user");
+
+        targetInvites.push({ id: myUserId, type });
+
+        return successMResponse(true);
+    }
+
+    uninviteUser(myUserId: number, targetUserId: number): MResponse<Invite> {
+        if (!this.isUserOnline(targetUserId))
+            return failureMResponse("Target is offline");
+        
+        const targetInvites = this.invites.get(targetUserId);
+
+        if (!targetInvites.find(i => i.id === myUserId))
+            return failureMResponse("You haven't invited this user");
+
+        const deleted = targetInvites.find(i => i.id === myUserId);
+
+        this.invites.set(targetUserId, targetInvites.filter(i => i.id !== myUserId));
+
+        return successMResponse(deleted);
+    }
+
+    deleteInvite(myUserId: number, targetUserId: number): MResponse<Invite> {
+        if (!this.isUserOnline(targetUserId))
+            return failureMResponse("Target is offline");
+        
+        const myInvites = this.invites.get(myUserId);
+
+        if (!myInvites.find(i => i.id === targetUserId))
+            return failureMResponse("This user didn't invite you");
+
+        const deleted = myInvites.find(i => i.id === targetUserId);
+
+        this.invites.set(myUserId, myInvites.filter(i => i.id !== targetUserId));
+
+        return successMResponse(deleted);
+    }
+
     movePlayer(userId: number): MResponse<boolean> {
         
-        const game  = this.games.find((g) => g.p1 == userId || g.p2 == userId);
+        const game  = [...this.games.values()].find((g) => g.p1 == userId || g.p2 == userId);
         if (!game) {
             return failureMResponse("no game found for this user");
         }

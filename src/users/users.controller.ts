@@ -25,6 +25,8 @@ import {extname} from 'path';
 import {maxUploadSize} from 'lib';
 import {plainToClass} from 'class-transformer';
 import {UserTokenGuard} from 'src/auth/auth.guard';
+import { GameEntity } from 'src/game/entities/game.entity';
+import { GameEntityDto } from 'src/game/dto/game.dto';
 
 @Controller('users')
 export class UsersController {
@@ -58,15 +60,12 @@ export class UsersController {
         storage: diskStorage({
             destination: './uploads',
             filename: function (req, file, cb) {
-                console.log(req.user);
-                cb(null, req.user.username + extname(file.originalname).toLowerCase());
+                cb(null, req.user.username + extname(file.originalname).toLowerCase() + '.tmp');
             }
         }),
         limits: {fileSize: maxUploadSize},
         fileFilter: function fileFilter(req, file, cb) {
-            console.debug("running test...");
             if (file.mimetype !== 'image/png' && file.mimetype !== 'image/jpg' && file.mimetype !== 'image/jpeg') {
-                console.debug("wrong file type");
                 return cb(new UnsupportedMediaTypeException('Only jpg/jpeg or png files are accepted'), false);
             }
             cb(null, true);
@@ -148,4 +147,11 @@ export class UsersController {
         return this.usersService.deleteBlocked(userId, parseInt(blockedId));
     }
 
+    @UseGuards(UserTokenGuard)
+    @Get(':userid/games')
+    async getUserGames(
+        @Param('userid', ParseIntPipe) userId: number
+    ): Promise<MResponse<GameEntityDto[]>> {
+        return await this.usersService.getUserGames(userId);
+    }
 }

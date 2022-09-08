@@ -8,12 +8,17 @@ import * as fs from 'fs';
 import {defaultAvatar} from 'lib';
 import {ChannelEntity} from 'src/channel/entities/channel.entity';
 import {plainToClass} from 'class-transformer';
+import { GameEntity } from 'src/game/entities/game.entity';
+import { identity } from 'rxjs';
+import { GameEntityDto } from 'src/game/dto/game.dto';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(UserEntity)
         private usersRepository: Repository<UserEntity>,
+        @InjectRepository(GameEntity)
+        private gameRepository: Repository<GameEntity>
     ) {
     }
 
@@ -26,7 +31,7 @@ export class UsersService {
             where: {"id": id},
             relations: relations
 
-        }).catch(() => null);
+        }).catch(() =>  null);
     }
 
     async getUserByUsername(user: string): Promise<UserEntity | null> {
@@ -70,15 +75,16 @@ export class UsersService {
         if (!userResult) {
             return failureMResponse("Invalid user");
         }
-        if (userResult.img_path !== defaultAvatar && userResult.img_path !== path) {
-            // delete previous avatar
-            try {
+
+        const newPath = path.replace('.tmp', '');
+        try {
+            if (newPath.split('.').reverse()[0] !== userResult.img_path.split('.').reverse()[0])
                 fs.unlinkSync(userResult.img_path);
-            } catch {}
-        }
+            fs.renameSync(path, newPath);
+        } catch {}
         
         // register new avatar's path in DB
-        return await this.usersRepository.update({username: user}, {img_path: path}).then(() => {
+        return await this.usersRepository.update({username: user}, {img_path: newPath}).then(() => {
             return successMResponse(true);
         }).catch((e) => {
             return failureMResponse("failed to save to database");
@@ -290,4 +296,24 @@ export class UsersService {
             }, { nickname: newNick }).catch(() => {resolve(false);}).then(() => resolve(true));
         });
     }
+
+    async getUserGames(userId: number): Promise<MResponse<GameEntityDto[]>> {
+        const user = await this.getUserById(userId, ['games', 'games.player', 'games.opponent']);
+
+        if (!user) {
+            return failureMResponse("Invalid user");
+        }
+
+        return successMResponse(user.games.map((game) => plainToClass(GameEntityDto, {
+                id: game.id,
+                type: game.type,
+                playerId: game.player.id,
+                opponnentId: game.opponent.id,
+                playerScore: game.playerScore,
+                opponnentScore: game.opponentScore,
+                endedAt: Date.now(),
+            }
+        )));
+    }
+
 }

@@ -12,7 +12,7 @@ import {Server, Socket} from 'socket.io';
 import {ChannelService} from 'src/channel/channel.service';
 import {AddMessageEntityDto} from 'src/channel/dto/message.dto';
 import {UsersService} from 'src/users/users.service';
-import {SocketService} from './socket.service';
+import {Invite, SocketService} from './socket.service';
 import * as argon2 from "argon2";
 import {SanctionType} from "../channel/entities/sanction.entity";
 import {Repository} from "typeorm";
@@ -21,8 +21,9 @@ import {InjectRepository} from "@nestjs/typeorm";
 import {ChannelDto} from 'src/channel/dto/channel.dto';
 import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
-import { CONFIGURABLE_MODULE_ID } from '@nestjs/common/module-utils/constants';
 import { PadMove } from 'src/game/lib/game';
+import { UserEntity } from 'src/users/entities/user.entity';
+import { MsgMaxSize } from 'lib';
 
 export class UserPermission {
     id: number;
@@ -79,7 +80,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         const user = await this.userService.getUserByToken(
-            client.handshake.headers.authorization, ['friends', 'blocked', 'channels']
+            client.handshake.headers.authorization, ['friends', 'blocked', 'channels', 'channels.messages']
         );
 
         if (!user) {
@@ -103,6 +104,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         user.channels.forEach(c => {
             client.join(`channel_${c.id}`);
+            client.emit('channel_info', plainToClass(ChannelDto, c, {excludeExtraneousValues: true}));
         })
     }
 
@@ -129,7 +131,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
 
         if (!user) {
-            client.emit('error', 'Invalid user');
+            client.emit('error', 'Invalid user CHAN_LIST');
             return;
         }
 
@@ -463,6 +465,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!user || !('channelId' in data) || !('content' in data) || /^\s*$/.test(data.content)) {
             client.emit('error', `Invalid data or empty message`);
+            return;
+        }
+
+        if (data.content.length > MsgMaxSize) {
+            client.emit("error", `You cannot send more than ${MsgMaxSize} characters`);
             return;
         }
 
@@ -1021,7 +1028,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(`channel_${channel.id}`).emit("channel_sanctions", { channelId: channel.id, users: sanctions });
     }
 
-    sendSocketMsgByUserId(userId: number, event: string, payload: any) {
+    sendSocketMsgByUserId(userId: number, event: string, payload: any = null) {
         const client = this.socketService.getUserKVByUserId(userId);
         const isClientOnline = !!client;
 
@@ -1050,7 +1057,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return users;
     }
 
-    @SubscribeMessage('addQueue')
+    @SubscribeMessage('game_add_queue')
     async requestMatch(
         @MessageBody() data: { type: GameType },
         @ConnectedSocket() client: Socket,
@@ -1061,7 +1068,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
         const user = this.socketService.getConnectedUser(client.id)
         if (!user) {
-            client.emit('error', 'Invalid user');
+            client.emit('error', 'Invalid user GAME_ADD_QUEUE');
             return ;
         }
         console.debug(`game requested for ${user.nickname}`);
@@ -1072,7 +1079,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        client.emit('success', r.payload);
+        client.emit('game_queued', { type: data.type });
 
         const r2 = await this.socketService.checkMatch();
 
@@ -1082,9 +1089,178 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        console.log("Found game for user!");
+        const [socket1, socket2] = r2.payload.map(g => this.getSocketFromUserId(g.player.id));
+
+        if (!socket1 || !socket2) {
+            console.log("What? Someone is offline??");
+        }
+
+        const gameId = [r2.payload[0].player.id, r2.payload[1].player.id].sort().join('_');
+
+        socket1.join(`game_${gameId}`);
+        socket2.join(`game_${gameId}`);
+ 
+        this.server.to(`game_${gameId}`).emit('success', `Found opponent! Started game with ID: ${gameId}`);
+        this.server.to(`game_${gameId}`).emit('game_found');
     }
 
+    getSocketFromUserId(userId: number) {
+        const user = this.socketService.getUserKVByUserId(userId);
+
+        if (!user)
+            return null;
+        return this.getSocketFromSocketId(user[0]);
+    }
+
+    getSocketFromSocketId(socketId: string) {
+        return this.server.sockets.sockets.get(socketId);
+    }
+
+    @SubscribeMessage('game_del_queue')
+    async cancelMatch(
+        @ConnectedSocket() client: Socket,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+
+        if (!user) {
+            client.emit('error', 'Invalid user GAME_DEL_QUEUE');
+            return;
+        }
+        
+        const r = this.socketService.cancelMatchmakingFor(user.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        client.emit('game_unqueued');
+    }
+
+    @SubscribeMessage('game_invite')
+    async inviteUser(
+        @MessageBody() data: { nickname: string, type: GameType },
+        @ConnectedSocket() client: Socket,
+
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('nickname' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
+
+        const target = this.socketService.getConnectedUserByNick(data.nickname);
+        
+        const r = this.socketService.inviteUser(user.id, target?.id, data.type);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        const invite = this.socketService.getInvites(target.id).find(i => i.id === user.id);
+
+        client.emit('game_invite_sent', { ...invite, nickname: target.nickname });
+        this.sendSocketMsgByUserId(target.id, 'game_invite', { ...invite, nickname: user.nickname });
+    }
+
+    @SubscribeMessage('game_uninvite')
+    async uninviteUser(
+        @MessageBody() data: { nickname: string, type: GameType },
+        @ConnectedSocket() client: Socket,
+
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('nickname' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
+
+        const target = this.socketService.getConnectedUserByNick(data.nickname);
+        
+        const r = this.socketService.uninviteUser(user.id, target?.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        client.emit('game_invite_cancel', { ...r.payload, nickname: target.nickname });
+        this.sendSocketMsgByUserId(target.id, 'game_invite_del', { ...r.payload, nickname: user.nickname });
+        this.sendSocketMsgByUserId(target.id, 'warning', `${user.nickname} cancelled their invitation`);
+    }
+
+    @SubscribeMessage('game_invite_accept')
+    async acceptInvite(
+        @MessageBody() data: Invite,
+        @ConnectedSocket() client: Socket,
+
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('id' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
+    
+        const target = this.socketService.getConnectedUserById(data.id);
+        
+        const r = this.socketService.deleteInvite(user.id, target?.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        const r2 = await this.socketService.createGame(user, target, data.type);
+
+        if (r2.status !== 'success') {
+            client.emit('error', r2.message);
+            return;
+        }
+
+        const gameId = [r2.payload[0].player.id, r2.payload[1].player.id].sort().join('_');
+
+        client.join(`game_${gameId}`);
+        this.getSocketFromUserId(target.id)?.join(`game_${gameId}`);
+
+        // Notify and remove invite from store
+        client.emit('success', `You accepted ${target.nickname}'s invite`);
+        client.emit('game_invite_del', { ...r.payload, nickname: user.nickname });
+        this.sendSocketMsgByUserId(target.id, 'success', `${user.nickname} accepted your invite`);
+        this.sendSocketMsgByUserId(target.id, 'game_invite_accepted', { ...r.payload, nickname: user.nickname });
+
+        // Stop queue animation and send to game page??
+        this.server.to(`game_${gameId}`).emit('success', 'CREATED GAME WITH ID: ' + gameId);
+        this.server.to(`game_${gameId}`).emit('game_found');
+    }
+
+    @SubscribeMessage('game_invite_refuse')
+    async refuseInvite(
+        @MessageBody() data: Invite,
+        @ConnectedSocket() client: Socket,
+
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user || !('id' in data) || !('type' in data)) {
+            client.emit('error', "Invalid data");
+            return;
+        }
+
+        const target = this.socketService.getConnectedUserById(data.id);
+        
+        const r = this.socketService.deleteInvite(user.id, target?.id);
+
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
+            return;
+        }
+
+        // Notify and remove invite from store
+        client.emit('success', `You refused ${target.nickname}'s invite`);
+        client.emit('game_invite_del', { ...r.payload, nickname: user.nickname });
+        this.sendSocketMsgByUserId(target.id, 'warning', `${user.nickname} refused your invite`);
+        this.sendSocketMsgByUserId(target.id, 'game_invite_refused', { ...r.payload, nickname: user.nickname });
+    }
 
     @SubscribeMessage('game_key_down')
     async gameMove(
@@ -1110,7 +1286,4 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.debug(`${user.nickname} moves ${data.key}`);
 
     }
-    
-
-
 }

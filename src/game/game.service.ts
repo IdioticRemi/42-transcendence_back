@@ -1,5 +1,6 @@
 import {Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
+import { Server } from 'socket.io';
 import {Repository} from 'typeorm';
 import {GameEntity} from './entities/game.entity';
 import {Game} from './lib/game';
@@ -141,12 +142,14 @@ export class GameService {
             pad.y += pad.speed;
     }
 
-    async startNewGame() {
-        const game = new Game();
+    async startNewGame(server: Server, p1: number, p2: number) {
+        const game = new Game(server, p1, p2);
         this.gameInit(game);
         await new Promise(resolve => setTimeout(resolve, startTime));
         game.interval = setInterval(() => this.gameLoop(game), 1000/gameFps);
     }
+
+
 
 
 }
