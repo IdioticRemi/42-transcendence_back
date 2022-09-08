@@ -125,8 +125,15 @@ export class GameService {
         if (game.ball.x + game.ball.size >= game.padRight.x + game.padLeft.width && game.ball.velocityX > 0) {
             this.checkPad(game.padRight, game.ball);
         }
+
+        // Add velocity to ball
         game.ball.x += game.ball.velocityX;
         game.ball.y += game.ball.velocityY;
+        
+        // Make sure coordinates stay positive between 0 and 100
+        game.ball.x = Math.max(Math.min(game.ball.x, 100), 0);
+        game.ball.y = Math.max(Math.min(game.ball.y, 100), 0);
+
         if (game.padLeft.move === PadMove.UP)
             this.padUp(game.padLeft);
         else if (game.padLeft.move === PadMove.DOWN)

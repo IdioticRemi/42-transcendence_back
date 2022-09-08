@@ -12,7 +12,7 @@ export const padSpeed = 1;
 export const padHeight = 15;
 export const padWidth = 1.25;
 export const padLeftStartX = padWidth * 2;
-export const padRightStartX = 100 - (padWidth * 2);
+export const padRightStartX = 100 - (padWidth * 3);
 export const padStartY = 50 - padHeight / 2;
 
 export enum PadMove {
