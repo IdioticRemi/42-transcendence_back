@@ -308,10 +308,11 @@ export class UsersService {
                 id: game.id,
                 type: game.type,
                 playerId: game.player.id,
-                opponnentId: game.opponent.id,
+                opponentId: game.opponent.id,
+                opponentNick: game.opponent.nickname,
+                opponentScore: game.opponentScore,
                 playerScore: game.playerScore,
-                opponnentScore: game.opponentScore,
-                endedAt: Date.now(),
+                endedAt: game.endedAt,
             }
         )));
     }

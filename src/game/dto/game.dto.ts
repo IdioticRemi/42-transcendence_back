@@ -10,12 +10,15 @@ export class GameEntityDto {
 
     @Expose()
     opponentId: number;
+
+    @Expose()
+    opponentNick: string;
     
     @Expose()
     playerScore: number;
     
     @Expose()
-    opponnentScore: number;
+    opponentScore: number;
 
     @Expose()
     type: string;
