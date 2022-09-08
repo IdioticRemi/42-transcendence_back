@@ -94,6 +94,7 @@ export class GameService {
             game.p2Score++;
             if (game.p2Score !== scoreMax) {
                 game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
+                this.updateDbScore(game);
                 this.setInit(game);
             }
         }
@@ -101,18 +102,20 @@ export class GameService {
             game.p1Score++;
             if (game.p1Score !== scoreMax) {
                 game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
+                this.updateDbScore(game);
                 this.setInit(game);
             }
         }
     }
 
-    gameLoop(game: Game) {
+    async gameLoop(game: Game) {
         this.checkWin(game);
         if (game.p1Score === scoreMax || game.p2Score === scoreMax) {
             clearInterval(game.interval);
             const winner = game.p1Score === scoreMax ? game.p1 : game.p2;
             const winnerScore = Math.max(game.p1Score, game.p2Score);
             const loserScore = Math.min(game.p1Score, game.p2Score);
+            await this.updateDbScore(game);
             game.server.to(`game_${game.id}`).emit('success', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
             return;
         }
@@ -157,5 +160,14 @@ export class GameService {
     async startGame(game: Game) {
         this.gameInit(game);
         game.interval = setInterval(() => this.gameLoop(game), 1000/gameFps);
+    }
+
+    async updateDbScore(game: Game) {
+        try {
+            await this.gameRepository.update(game.dbIdP1, {playerScore: game.p1Score, opponentScore: game.p2Score});
+            await this.gameRepository.update(game.dbIdP2, {playerScore: game.p2Score, opponentScore: game.p1Score});
+        } catch {
+            game.server.to(`game_${game.id}`).emit('error', "could not update score in database");
+        }
     }
 }

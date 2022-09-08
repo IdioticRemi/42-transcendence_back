@@ -184,7 +184,7 @@ export class SocketService {
 
         try {
             gameP2 = await this.gameRepository.save(gameP2);
-            this.games.set(gameId, new Game(server, p1.id, p2.id));
+            this.games.set(gameId, new Game(server, p1.id, p2.id, gameP1.id, gameP2.id));
         } catch {
             await this.gameRepository.delete(gameP1.id);
             return failureMResponse("could not save to database");

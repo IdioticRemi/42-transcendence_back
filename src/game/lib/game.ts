@@ -69,9 +69,11 @@ export class Game {
   p1: number;
   p2: number;
   id: string;
+  dbIdP1: number;
+  dbIdP2: number;
   spectactors: number[];
 
-  constructor(server: Server, p1: number, p2: number) {
+  constructor(server: Server, p1: number, p2: number, dbIdP1: number, dbIdP2: number) {
     this.server = server;
     this.interval = null;
     this.p1Score = 0;
@@ -83,6 +85,8 @@ export class Game {
     this.p2 = p2;
     this.spectactors = [];
     this.id = [p1, p2].sort().join('_');
+    this.dbIdP1 = dbIdP1;
+    this.dbIdP2 = dbIdP2;
   }
 
 }
