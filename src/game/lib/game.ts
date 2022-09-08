@@ -68,9 +68,8 @@ export class Game {
   server: Server;
   p1: number;
   p2: number;
+  id: string;
   spectactors: number[];
-  
-
 
   constructor(server: Server, p1: number, p2: number) {
     this.server = server;
@@ -83,6 +82,7 @@ export class Game {
     this.p1 = p1;
     this.p2 = p2;
     this.spectactors = [];
+    this.id = [p1, p2].sort().join('_');
   }
 
 }

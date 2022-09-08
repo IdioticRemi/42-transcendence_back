@@ -36,7 +36,7 @@ export class GameService {
         this.setInit(game);
     }
 
-    setInit(game: Game) {
+    async setInit(game: Game) {
         game.ball.x = ballStartX;
         game.ball.y = ballStartY;
         game.ball.speed = ballSpeed;
@@ -48,6 +48,7 @@ export class GameService {
         game.ball.velocityY = game.ball.speed * Math.sin(Math.PI / 4);
         this.padInit(game.padLeft, 1);
         this.padInit(game.padRight, 2);
+        await new Promise(resolve => setTimeout(resolve, startTime));
     }
 
     padInit(pad: Pad, side: number) {
@@ -91,13 +92,17 @@ export class GameService {
     checkWin(game: Game) {
         if (game.ball.x <= 0) {
             game.p2Score++;
-            if (game.p2Score !== scoreMax)
+            if (game.p2Score !== scoreMax) {
+                game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
                 this.setInit(game);
+            }
         }
         else if (game.ball.x + game.ball.size >= 100) {
             game.p1Score++;
-            if (game.p1Score !== scoreMax)
+            if (game.p1Score !== scoreMax) {
+                game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
                 this.setInit(game);
+            }
         }
     }
 
@@ -105,7 +110,10 @@ export class GameService {
         this.checkWin(game);
         if (game.p1Score === scoreMax || game.p2Score === scoreMax) {
             clearInterval(game.interval);
-            //TODO: send victory and saving in database history
+            const winner = game.p1Score === scoreMax ? game.p1 : game.p2;
+            const winnerScore = Math.max(game.p1Score, game.p2Score);
+            const loserScore = Math.min(game.p1Score, game.p2Score);
+            game.server.to(`game_${game.id}`).emit('success', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
             return;
         }
         this.checkWalls(game.ball);
@@ -125,7 +133,11 @@ export class GameService {
             this.padUp(game.padRight);
         else if (game.padRight.move === PadMove.DOWN)
             this.padDown(game.padRight);
-        //TODO: send new pos for front
+        this.formatAndSendData(game);
+    }
+
+    formatAndSendData(game: Game) {
+        game.server.to(`game_${game.id}`).emit('game_data', { ball: game.ball, padLeft: game.padLeft, padRight: game.padRight });
     }
 
     padUp(pad: Pad) {
@@ -142,14 +154,8 @@ export class GameService {
             pad.y += pad.speed;
     }
 
-    async startNewGame(server: Server, p1: number, p2: number) {
-        const game = new Game(server, p1, p2);
+    async startGame(game: Game) {
         this.gameInit(game);
-        await new Promise(resolve => setTimeout(resolve, startTime));
         game.interval = setInterval(() => this.gameLoop(game), 1000/gameFps);
     }
-
-
-
-
 }

@@ -24,6 +24,7 @@ import { GameType } from 'src/game/entities/game.entity';
 import { PadMove } from 'src/game/lib/game';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { MsgMaxSize } from 'lib';
+import { GameService } from 'src/game/game.service';
 
 export class UserPermission {
     id: number;
@@ -46,7 +47,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private userService: UsersService,
         private socketService: SocketService,
         @InjectRepository(ChannelEntity)
-        private channelRepository: Repository<ChannelEntity>
+        private channelRepository: Repository<ChannelEntity>,
+        private gameService: GameService,
     ) {
         setInterval(async () => {
             const deleted = await this.channelService.refreshSanctions();
@@ -1089,19 +1091,31 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const [socket1, socket2] = r2.payload.map(g => this.getSocketFromUserId(g.player.id));
+        const [socket1, socket2] = r2.payload.map(u => this.getSocketFromUserId(u.id));
 
         if (!socket1 || !socket2) {
             console.log("What? Someone is offline??");
         }
 
-        const gameId = [r2.payload[0].player.id, r2.payload[1].player.id].sort().join('_');
+        const gameId = [r2.payload[0].id, r2.payload[1].id].sort().join('_');
 
         socket1.join(`game_${gameId}`);
         socket2.join(`game_${gameId}`);
+
+        const r3 = await this.socketService.createGame(this.server, r2.payload[0], r2.payload[1], data.type);
+        if (r3.status !== 'success') {
+            if (r3.message)
+                client.emit('error', r3.message);
+
+            socket1.leave(`game_${gameId}`);
+            socket2.leave(`game_${gameId}`);
+            return;
+        }
  
         this.server.to(`game_${gameId}`).emit('success', `Found opponent! Started game with ID: ${gameId}`);
         this.server.to(`game_${gameId}`).emit('game_found');
+
+        this.gameService.startGame(this.socketService.getGameByGameId(gameId));
     }
 
     getSocketFromUserId(userId: number) {
@@ -1211,7 +1225,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        const r2 = await this.socketService.createGame(user, target, data.type);
+        const r2 = await this.socketService.createGame(this.server, user, target, data.type);
 
         if (r2.status !== 'success') {
             client.emit('error', r2.message);
@@ -1232,6 +1246,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Stop queue animation and send to game page??
         this.server.to(`game_${gameId}`).emit('success', 'CREATED GAME WITH ID: ' + gameId);
         this.server.to(`game_${gameId}`).emit('game_found');
+
+        this.gameService.startGame(this.socketService.getGameByGameId(gameId));
     }
 
     @SubscribeMessage('game_invite_refuse')
@@ -1262,12 +1278,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.sendSocketMsgByUserId(target.id, 'game_invite_refused', { ...r.payload, nickname: user.nickname });
     }
 
-    @SubscribeMessage('game_key_down')
-    async gameMove(
-        @MessageBody() data: { key: string },
+    @SubscribeMessage('game_move')
+    async gameKeyPress(
+        @MessageBody() data: string,
         @ConnectedSocket() client: Socket,
     ) {
-        if (!client || !("type" in data)) {
+        if (!client || !['up', 'down', 'stop'].includes(data)) {
             client.emit('error', "Invalid data");
             return ;
         }
@@ -1277,13 +1293,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return ;
         }
 
-        if (data.key !== 'ArrowUp' && data.key !== 'ArrowDown') {
-            console.debug("wrong key press !");
+        let move = PadMove.STATIC;
+        if (data === 'up') move = PadMove.UP;
+        if (data === 'down') move = PadMove.DOWN;
+
+        const r = this.socketService.movePlayer(user.id, move);
+        if (r.status !== 'success') {
+            client.emit('error', r.message);
             return;
         }
 
-        const r = this.socketService.movePlayer(user.id);
-        console.debug(`${user.nickname} moves ${data.key}`);
-
+        console.debug(`${user.nickname} moves ${data}`);
     }
 }

@@ -5,7 +5,9 @@ import {UserEntity} from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import {UsersService} from 'src/users/users.service';
 import { failureMResponse, MResponse, successMResponse } from 'lib/MResponse';
-import { Game } from 'src/game/lib/game';
+import { Game, PadMove } from 'src/game/lib/game';
+import e from 'express';
+import { Server } from 'socket.io';
 
 export interface Invite {
     id: number;
@@ -128,7 +130,7 @@ export class SocketService {
         return failureMResponse("Unknown game type");
     }
 
-    async checkMatch(): Promise<MResponse<GameEntity[]>> {
+    async checkMatch(): Promise<MResponse<UserEntity[]>> {
         if (this.matchmakingClassic.length > 1) {
             return await this.matchmake(GameType.CLASSIC);
         }
@@ -138,7 +140,7 @@ export class SocketService {
         return failureMResponse("");
     }
 
-    async matchmake(type: GameType): Promise<MResponse<GameEntity[]>> {
+    async matchmake(type: GameType): Promise<MResponse<UserEntity[]>> {
         
         const queue = type === GameType.CLASSIC ? this.matchmakingClassic : this.matchmakingCustom;
         
@@ -147,10 +149,10 @@ export class SocketService {
         if (!p1 || !p2)
             return failureMResponse("a user is not online");
         
-        return await this.createGame(p1, p2, type);
+        return successMResponse([p1, p2]);
     }
 
-    async createGame(p1: UserEntity, p2: UserEntity, type: GameType): Promise<MResponse<GameEntity[]>> {
+    async createGame(server: Server, p1: UserEntity, p2: UserEntity, type: GameType): Promise<MResponse<GameEntity[]>> {
         if (![GameType.CLASSIC, GameType.CUSTOM].includes(type))
             return failureMResponse("Invalid game type");
 
@@ -174,19 +176,29 @@ export class SocketService {
             return failureMResponse("could not create database objects");
         }
 
-        gameP1 = await this.gameRepository.save(gameP1)
-            .catch((e) => {console.debug(e); return null});
+        try {
+            gameP1 = await this.gameRepository.save(gameP1);
+        } catch {
+            return failureMResponse("could not save to database");
+        }
 
         try {
             gameP2 = await this.gameRepository.save(gameP2);
-            this.games.set(gameId, null);
-        } catch (e) {
-            console.debug(e);
+            this.games.set(gameId, new Game(server, p1.id, p2.id));
+        } catch {
             await this.gameRepository.delete(gameP1.id);
             return failureMResponse("could not save to database");
         }
 
         return (successMResponse([gameP1, gameP2]));
+    }
+
+    getGameByGameId(gameId: string) {
+        return this.games.get(gameId);
+    }
+
+    getGameByPlayerId(userId: number) {
+        return [...this.games.values()].find(g => [g.p1, g.p2].includes(userId));
     }
 
     isUserOnline(userId: number): boolean {
@@ -243,11 +255,20 @@ export class SocketService {
         return successMResponse(deleted);
     }
 
-    movePlayer(userId: number): MResponse<boolean> {
+    movePlayer(userId: number, key: PadMove): MResponse<boolean> {
         
-        const game  = [...this.games.values()].find((g) => g.p1 == userId || g.p2 == userId);
+        const game  = this.getGameByPlayerId(userId);
         if (!game) {
             return failureMResponse("no game found for this user");
         }
+
+        // Make it so user cannot go in another direction until they have "unpressed" the previous key
+        if (game[game.p1 === userId ? 'padLeft' : 'padRight'].move === PadMove.STATIC && key !== PadMove.STATIC)
+            game[game.p1 === userId ? 'padLeft' : 'padRight'].move = key;
+        // Reset to static on key release or disconnected??
+        else if (game[game.p1 === userId ? 'padLeft' : 'padRight'].move !== PadMove.STATIC && key === PadMove.STATIC)
+            game[game.p1 === userId ? 'padLeft' : 'padRight'].move = key;
+
+        return successMResponse(true);
     }
 }

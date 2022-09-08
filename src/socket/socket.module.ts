@@ -8,11 +8,13 @@ import {UsersModule} from 'src/users/users.module';
 import {SocketService} from './socket.service';
 import {SocketGateway} from './socket.gateway';
 import { GameEntity } from 'src/game/entities/game.entity';
+import { GameModule } from 'src/game/game.module';
+import { GameService } from 'src/game/game.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([UserEntity, ChannelEntity, MessageEntity, GameEntity]), UsersModule, ChannelModule],
+    imports: [TypeOrmModule.forFeature([UserEntity, ChannelEntity, MessageEntity, GameEntity]), UsersModule, ChannelModule, GameModule],
     exports: [SocketService],
-    providers: [SocketService, SocketGateway]
+    providers: [SocketService, SocketGateway, GameService]
 })
 export class SocketModule {
 }
