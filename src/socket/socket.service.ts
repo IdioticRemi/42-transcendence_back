@@ -212,6 +212,10 @@ export class SocketService {
     inviteUser(myUserId: number, targetUserId: number, type: GameType): MResponse<boolean> {
         if (!this.isUserOnline(targetUserId))
             return failureMResponse("Target is offline");
+
+        if (targetUserId === myUserId) {
+            return failureMResponse("You cannot invite yourself");
+        }
         
         const targetInvites = this.invites.get(targetUserId);
 
