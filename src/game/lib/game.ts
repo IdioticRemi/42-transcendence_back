@@ -29,13 +29,13 @@ export class Ball {
   velocityY: number;
   size: number;
 
-  constructor() {
-    this.x = 0;
-    this.y = 0;
-    this.speed = 0;
-    this.velocityX  = 0;
-    this.velocityY = 0;
-    this.size = 0;
+  constructor(velocityX: number) {
+    this.x = ballStartX;
+    this.y = ballStartY;
+    this.speed = ballSpeed;
+    this.velocityX  = velocityX;
+    this.velocityY = ballSpeed * Math.sin(Math.PI / 4);
+    this.size = ballSize;
   }
 }
 
@@ -47,19 +47,20 @@ export class Pad {
   speed: number;
   move: number;
 
-  constructor() {
-    this.x = 0;
-    this.y = 0;
-    this.height = 0;
-    this.width = 0;
-    this.speed = 0;
-    this.move = 0;
+  constructor(startX: number) {
+    this.x = startX;
+    this.y = padStartY;
+    this.height = padHeight;
+    this.width = padWidth;
+    this.speed = padSpeed;
+    this.move = PadMove.STATIC;
   }
 }
 
 export class Game {
   
   interval: NodeJS.Timer;
+  pause: boolean;
   p1Score: number;
   p2Score: number;
   ball: Ball;
@@ -76,11 +77,12 @@ export class Game {
   constructor(server: Server, p1: number, p2: number, dbIdP1: number, dbIdP2: number) {
     this.server = server;
     this.interval = null;
+    this.pause = false;
     this.p1Score = 0;
     this.p2Score = 0;
-    this.ball = new Ball();
-    this.padLeft = new Pad();
-    this.padRight = new Pad();
+    this.ball = new Ball(-ballSpeed * Math.cos(Math.PI / 4));
+    this.padLeft = new Pad(padLeftStartX);
+    this.padRight = new Pad(padRightStartX);
     this.p1 = p1;
     this.p2 = p2;
     this.spectactors = [];
