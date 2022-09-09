@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common';
+import {forwardRef, Module} from '@nestjs/common';
 import {TypeOrmModule} from '@nestjs/typeorm';
 import {ChannelModule} from 'src/channel/channel.module';
 import {ChannelEntity} from 'src/channel/entities/channel.entity';
@@ -12,7 +12,7 @@ import { GameModule } from 'src/game/game.module';
 import { GameService } from 'src/game/game.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([UserEntity, ChannelEntity, MessageEntity, GameEntity]), UsersModule, ChannelModule, GameModule],
+    imports: [TypeOrmModule.forFeature([UserEntity, ChannelEntity, MessageEntity, GameEntity]), UsersModule, ChannelModule],
     exports: [SocketService],
     providers: [SocketService, SocketGateway, GameService]
 })

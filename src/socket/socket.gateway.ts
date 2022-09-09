@@ -25,6 +25,7 @@ import { PadMove } from 'src/game/lib/game';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { MsgMaxSize } from 'lib';
 import { GameService } from 'src/game/game.service';
+import { forwardRef, Inject } from '@nestjs/common';
 
 export class UserPermission {
     id: number;
@@ -86,6 +87,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         );
 
         if (!user) {
+            client.disconnect();
+            return;
+        }
+        
+        const alreadyConnected = this.socketService.isUserOnline(user.id);
+        if (alreadyConnected) {
+            client.emit('logout_user');
             client.disconnect();
             return;
         }
@@ -398,7 +406,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         this.server.to(`channel_${channel.id}`).emit('channel_leave', {channelId: channel.id});
-        this.server.to(`channel_${channel.id}`).socketsLeave(`channel_${channel.id}`);
+        this.server.socketsLeave(`channel_${channel.id}`);
     }
 
     @SubscribeMessage('channel_leave')
@@ -1066,13 +1074,24 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         if (!client || !("type" in data)) {
             client.emit('error', "Invalid data");
-            return ;
+            return;
         }
         const user = this.socketService.getConnectedUser(client.id)
         if (!user) {
             client.emit('error', 'Invalid user GAME_ADD_QUEUE');
-            return ;
+            return;
         }
+
+        if (this.socketService.isInviting(user.id)) {
+            client.emit('error', 'You cannot queue while inviting');
+            return;
+        }
+
+        if (this.socketService.isInGame(user.id)) {
+            client.emit('error', 'You cannot queue while in game');
+            return;
+        }
+
         console.debug(`game requested for ${user.nickname}`);
         const r = this.socketService.addUserToMatchmaking(user.id, data.type);
 
@@ -1160,6 +1179,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         if (!user || !('nickname' in data) || !('type' in data)) {
             client.emit('error', "Invalid data");
+            return;
+        }
+
+        if (this.socketService.isInGame(user.id)) {
+            client.emit('error', 'You cannot invite while in game');
             return;
         }
 
@@ -1283,7 +1307,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: string,
         @ConnectedSocket() client: Socket,
     ) {
-        if (!client || !['up', 'down', 'stop'].includes(data)) {
+        console.log(data);
+        if (!client || !['ArrowUp', 'ArrowDown', 'Stop'].includes(data)) {
             client.emit('error', "Invalid data");
             return ;
         }
@@ -1294,8 +1319,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         let move = PadMove.STATIC;
-        if (data === 'up') move = PadMove.UP;
-        if (data === 'down') move = PadMove.DOWN;
+        if (data === 'ArrowUp') move = PadMove.UP;
+        if (data === 'ArrowDown') move = PadMove.DOWN;
 
         const r = this.socketService.movePlayer(user.id, move);
         if (r.status !== 'success') {
@@ -1305,4 +1330,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         console.debug(`${user.nickname} moves ${data}`);
     }
+
+
 }

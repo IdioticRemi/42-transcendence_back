@@ -1,6 +1,7 @@
-import {Injectable} from '@nestjs/common';
+import {forwardRef, Inject, Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import { Server } from 'socket.io';
+import { SocketService } from 'src/socket/socket.service';
 import {Repository} from 'typeorm';
 import {GameEntity} from './entities/game.entity';
 import {Game} from './lib/game';
@@ -27,6 +28,7 @@ export class GameService {
     constructor(
         @InjectRepository(GameEntity)
         private gameRepository: Repository<GameEntity>,
+        private socketService: SocketService,
     ) {
     }
 
@@ -79,11 +81,11 @@ export class GameService {
             const collidePoint = ball.y + ball.size / 2 -
               (pad.y + pad.height / 2);
 
-            ball.velocityX = Math.abs(ball.speed *
+            ball.velocityX = (pad.x > 50 ? -1 : 1) * Math.abs(ball.speed *
               Math.cos((collidePoint * Math.PI) / 4 / (pad.height / 2)));
 
-            ball.velocityX = Math.abs(ball.speed *
-              Math.sin((collidePoint * Math.PI) / 4 / (pad.height / 2)));
+            ball.velocityY = ball.speed *
+              Math.sin((collidePoint * Math.PI) / 4 / (pad.height / 2));
 
             ball.speed += ballSpeedInc;
         }
@@ -116,6 +118,9 @@ export class GameService {
             const winnerScore = Math.max(game.p1Score, game.p2Score);
             const loserScore = Math.min(game.p1Score, game.p2Score);
             game.server.to(`game_${game.id}`).emit('success', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
+            game.server.to(`game_${game.id}`).emit('game_ended', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
+            this.socketService.endGame(game.id);
+
             return;
         }
         this.checkWalls(game.ball);
@@ -158,7 +163,7 @@ export class GameService {
 
     padDown(pad: Pad) {
         if (pad.y + pad.height + pad.speed >= 100)
-            pad.y = 100;
+            pad.y = 100 - pad.height;
         else
             pad.y += pad.speed;
     }

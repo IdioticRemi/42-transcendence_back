@@ -210,6 +210,11 @@ export class SocketService {
     }
 
     inviteUser(myUserId: number, targetUserId: number, type: GameType): MResponse<boolean> {
+
+        if (this.isInQueue(myUserId)) {
+            return failureMResponse("You are already in queue for a game");
+        }
+        
         if (!this.isUserOnline(targetUserId))
             return failureMResponse("Target is offline");
 
@@ -222,7 +227,7 @@ export class SocketService {
         if (targetInvites.find(i => i.id === myUserId))
             return failureMResponse("You already invited this user");
 
-        if (this.matchmakingClassic.includes(targetUserId) || this.matchmakingCustom.includes(targetUserId)) {
+        if (this.isInQueue(targetUserId)) {
             return failureMResponse("Target is already queued for a game");
         }
 
@@ -278,5 +283,29 @@ export class SocketService {
             game[game.p1 === userId ? 'padLeft' : 'padRight'].move = key;
 
         return successMResponse(true);
+    }
+
+    isInQueue(userId: number) {
+        return (this.matchmakingClassic.includes(userId) || this.matchmakingCustom.includes(userId))
+    }
+
+    isInGame(userId: number) {
+        return [...this.games.values()].find(g => g.p1 === userId || g.p2 === userId)
+    }
+
+    isInviting(userId: number) {
+        return [...this.invites.values()].find(invites => !!invites.find(i => i.id === userId));
+    }
+
+    endGame(gameId: string) {
+        // final store to DB ??
+
+        const { server } = this.games.get(gameId);
+        
+        server.socketsLeave(`game_${gameId}`);
+        
+        this.games.delete(gameId);
+        
+        console.debug(gameId, "game deleted");
     }
 }
