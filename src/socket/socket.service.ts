@@ -222,6 +222,10 @@ export class SocketService {
         if (targetInvites.find(i => i.id === myUserId))
             return failureMResponse("You already invited this user");
 
+        if (this.matchmakingClassic.includes(targetUserId) || this.matchmakingCustom.includes(targetUserId)) {
+            return failureMResponse("Target is already queued for a game");
+        }
+
         targetInvites.push({ id: myUserId, type });
 
         return successMResponse(true);
