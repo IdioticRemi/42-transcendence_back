@@ -10,11 +10,11 @@ import {Pad} from './lib/game';
 import {PadMove} from './lib/game';
 import {scoreMax} from "./lib/game";
 import {startTime} from "./lib/game";
-import {gameFps} from "./lib/game";
+import {gameTps} from "./lib/game";
 import {ballStartX} from "./lib/game";
 import {ballStartY} from "./lib/game";
 import {ballSpeed} from "./lib/game";
-import {ballSpan} from "./lib/game";
+import {ballSize} from "./lib/game";
 import {ballSpeedInc} from "./lib/game";
 import {padLeftStartX} from "./lib/game";
 import {padRightStartX} from "./lib/game";
@@ -42,7 +42,7 @@ export class GameService {
         game.ball.x = ballStartX;
         game.ball.y = ballStartY;
         game.ball.speed = ballSpeed;
-        game.ball.size = ballSpan;
+        game.ball.size = ballSize;
         if (game.p2Score > game.p1Score)
             game.ball.velocityX = game.ball.speed * Math.cos(Math.PI / 4);
         else
@@ -117,8 +117,15 @@ export class GameService {
             const winner = game.p1Score === scoreMax ? game.p1 : game.p2;
             const winnerScore = Math.max(game.p1Score, game.p2Score);
             const loserScore = Math.min(game.p1Score, game.p2Score);
+
+            const winnerObj = this.socketService.getConnectedUserById(winner);
+
+            let winnerNick;
+            if (!winnerObj) winnerNick = "sample_nick";
+            else winnerNick = winnerObj.nickname;
+
             game.server.to(`game_${game.id}`).emit('success', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
-            game.server.to(`game_${game.id}`).emit('game_ended', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
+            game.server.to(`game_${game.id}`).emit('game_ended', { winnerNick, winnerId: winner, winnerScore, loserScore });
             this.socketService.endGame(game.id);
 
             return;
@@ -127,7 +134,7 @@ export class GameService {
         if (game.ball.x <= game.padLeft.x + game.padLeft.width && game.ball.velocityX < 0) {
             this.checkPad(game.padLeft, game.ball);
         }
-        if (game.ball.x + game.ball.size >= game.padRight.x + game.padLeft.width && game.ball.velocityX > 0) {
+        if (game.ball.x + game.ball.size >= game.padRight.x && game.ball.velocityX > 0) {
             this.checkPad(game.padRight, game.ball);
         }
 
@@ -151,7 +158,7 @@ export class GameService {
     }
 
     formatAndSendData(game: Game) {
-        game.server.to(`game_${game.id}`).emit('game_data', { ball: game.ball, padLeft: game.padLeft, padRight: game.padRight });
+        game.server.to(`game_${game.id}`).emit('game_data', { ball: game.ball, padLeft: game.padLeft, padRight: game.padRight, tps: gameTps });
     }
 
     padUp(pad: Pad) {
@@ -170,7 +177,7 @@ export class GameService {
 
     async startGame(game: Game) {
         this.gameInit(game);
-        game.interval = setInterval(() => this.gameLoop(game), 1000/gameFps);
+        game.interval = setInterval(() => this.gameLoop(game), 1000/gameTps);
     }
 
     async updateDbScore(game: Game) {

@@ -2,13 +2,13 @@ import { Server } from "socket.io";
 
 export const scoreMax = 3;
 export const startTime = 3000;
-export const gameFps = 60;
+export const gameTps = 20;
 export const ballStartX = 50;
 export const ballStartY = 6.67;
-export const ballSpeed = 1;
-export const ballSpan = 2.5;
-export const ballSpeedInc = 0.2;
-export const padSpeed = 1;
+export const ballSpeed = (20 / gameTps);
+export const ballSize = 2.5;
+export const ballSpeedInc = ballSpeed / 50;
+export const padSpeed = (20 / gameTps);
 export const padHeight = 15;
 export const padWidth = 1.25;
 export const padLeftStartX = padWidth * 2;
