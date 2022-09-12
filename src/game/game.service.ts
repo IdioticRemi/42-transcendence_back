@@ -13,14 +13,8 @@ import {gameTps} from "./lib/game";
 import {ballStartX} from "./lib/game";
 import {ballStartY} from "./lib/game";
 import {ballSpeed} from "./lib/game";
-import {ballSize} from "./lib/game";
 import {ballSpeedInc} from "./lib/game";
-import {padLeftStartX} from "./lib/game";
-import {padRightStartX} from "./lib/game";
 import {padStartY} from "./lib/game";
-import {padSpeed} from "./lib/game";
-import {padHeight} from "./lib/game";
-import {padWidth} from "./lib/game";
 
 @Injectable()
 export class GameService {
@@ -35,14 +29,11 @@ export class GameService {
         game.ball.x = ballStartX;
         game.ball.y = ballStartY;
         game.ball.speed = ballSpeed;
-        game.ball.size = ballSize;
         if (game.p2Score > game.p1Score)
             game.ball.velocityX = game.ball.speed * Math.cos(Math.PI / 4);
         else
             game.ball.velocityX = -game.ball.speed * Math.cos(Math.PI / 4);
         game.ball.velocityY = game.ball.speed * Math.sin(Math.PI / 4);
-        game.padLeft.x = padLeftStartX;
-        game.padRight.x = padRightStartX;
         this.padInit(game.padLeft);
         this.padInit(game.padRight);
         game.pause = true;
@@ -54,9 +45,6 @@ export class GameService {
 
     padInit(pad: Pad) {
         pad.y = padStartY;
-        pad.speed = padSpeed;
-        pad.height = padHeight;
-        pad.width = padWidth;
         pad.move = PadMove.STATIC;
     }
 
