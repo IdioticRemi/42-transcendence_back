@@ -64,13 +64,13 @@ export class UserEntity {
     @OneToMany(() => GameEntity, game => game.player)
     games: GameEntity[];
 
-    @CreateDateColumn({type: 'timestamptz'})
+    @CreateDateColumn()
     createdAt: Date;
 
-    @UpdateDateColumn({type: 'timestamptz'})
+    @UpdateDateColumn()
     updatedAt: Date;
 
-    @DeleteDateColumn({type: 'timestamptz'})
+    @DeleteDateColumn()
     deletedAt: Date;
 
 }

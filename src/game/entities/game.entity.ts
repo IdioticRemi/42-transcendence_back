@@ -43,7 +43,7 @@ export class GameEntity {
     type: string;
 
     @Column()
-    @UpdateDateColumn({type: 'timestamptz'})
+    @UpdateDateColumn()
     endedAt: Date;
 
 

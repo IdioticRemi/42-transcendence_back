@@ -18,7 +18,7 @@ export interface Invite {
 export class SocketService {
 
     private users: Map<string, UserEntity>;
-    private messages: Map<string, {friendId: number, userId: number, userNick: string, content: string}[]>;
+    private messages: Map<string, {friendId: number, userId: number, userNick: string, content: string, createdAt: Date}[]>;
     private matchmakingClassic: number[];
     private matchmakingCustom: number[];
     private invites: Map<number, Invite[]>; // Map.get(userID) returns every userID that invited him
@@ -47,8 +47,18 @@ export class SocketService {
                 this.messages.set(target, []);
             }
 
-            this.messages.get(target).push({ friendId: to, userId: user.id, userNick: user.nickname, content })
+            const message = {
+                friendId: to,
+                userId: user.id,
+                userNick: user.nickname,
+                content,
+                createdAt: new Date((Date.now()) + (new Date().getTimezoneOffset() * 60e3))
+            };
+            this.messages.get(target).push(message);
+            return message;
         }
+
+        return null;
     }
 
     updateUserNickname(userId: number, newNick: string) {

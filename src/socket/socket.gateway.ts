@@ -556,15 +556,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        this.socketService.sendMessage(client.id, friend.id, data.content);
+        const msg = this.socketService.sendMessage(client.id, friend.id, data.content);
 
-        const msg = {
-            friendId: friend.id,
-            userId: user.id,
-            userNick: user.nickname,
-            content: data.content,
-            createdAt: Date.now(),
-        };
+        if (!msg)
+            return;
 
         this.sendSocketMsgByUserId(friend.id, 'friend_message', msg);
         client.emit('friend_message', msg);
@@ -1110,9 +1105,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const [socket1, socket2] = r2.payload.map(u => this.getSocketFromUserId(u.id));
 
-        if (!socket1 || !socket2) {
-            console.log("What? Someone is offline??");
-        }
+        if (!socket1 || !socket2)
+            return;
 
         const gameId = [r2.payload[0].id, r2.payload[1].id].sort().join('_');
 
