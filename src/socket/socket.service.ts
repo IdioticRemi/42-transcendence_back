@@ -275,12 +275,13 @@ export class SocketService {
             return failureMResponse("no game found for this user");
         }
 
+        const userPad = game[game.p1 === userId ? 'padLeft' : 'padRight'];
         // Make it so user cannot go in another direction until they have "unpressed" the previous key
-        if (game[game.p1 === userId ? 'padLeft' : 'padRight'].move === PadMove.STATIC && key !== PadMove.STATIC)
-            game[game.p1 === userId ? 'padLeft' : 'padRight'].move = key;
+        // if (key !== PadMove.STATIC)
+            userPad.move = key;
         // Reset to static on key release or disconnected??
-        else if (game[game.p1 === userId ? 'padLeft' : 'padRight'].move !== PadMove.STATIC && key === PadMove.STATIC)
-            game[game.p1 === userId ? 'padLeft' : 'padRight'].move = key;
+        // else if (userPad.move !== PadMove.STATIC && key === PadMove.STATIC)
+            // userPad.move = key;
 
         return successMResponse(true);
     }

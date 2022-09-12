@@ -1,20 +1,20 @@
-import {Injectable} from '@nestjs/common';
-import {InjectRepository} from '@nestjs/typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { SocketService } from 'src/socket/socket.service';
-import {Repository} from 'typeorm';
-import {GameEntity} from './entities/game.entity';
-import {Game} from './lib/game';
-import {Ball} from './lib/game';
-import {Pad} from './lib/game';
-import {PadMove} from './lib/game';
-import {scoreMax} from "./lib/game";
-import {startTime} from "./lib/game";
-import {gameTps} from "./lib/game";
-import {ballStartX} from "./lib/game";
-import {ballStartY} from "./lib/game";
-import {ballSpeed} from "./lib/game";
-import {ballSpeedInc} from "./lib/game";
-import {padStartY} from "./lib/game";
+import { Repository } from 'typeorm';
+import { GameEntity } from './entities/game.entity';
+import { Game } from './lib/game';
+import { Ball } from './lib/game';
+import { Pad } from './lib/game';
+import { PadMove } from './lib/game';
+import { scoreMax } from "./lib/game";
+import { startTime } from "./lib/game";
+import { gameTps } from "./lib/game";
+import { ballStartX } from "./lib/game";
+import { ballStartY } from "./lib/game";
+import { ballSpeed } from "./lib/game";
+import { ballSpeedInc } from "./lib/game";
+import { padStartY } from "./lib/game";
 
 @Injectable()
 export class GameService {
@@ -58,17 +58,17 @@ export class GameService {
 
     checkPad(pad: Pad, ball: Ball) {
         if (
-          ball.y + ball.size > pad.y &&
-          ball.y < pad.y + pad.height
+            ball.y + ball.size > pad.y &&
+            ball.y < pad.y + pad.height
         ) {
             const collidePoint = ball.y + ball.size / 2 -
-              (pad.y + pad.height / 2);
+                (pad.y + pad.height / 2);
 
             ball.velocityX = (pad.x > 50 ? -1 : 1) * Math.abs(ball.speed *
-              Math.cos((collidePoint * Math.PI) / 4 / (pad.height / 2)));
+                Math.cos((collidePoint * Math.PI) / 4 / (pad.height / 2)));
 
             ball.velocityY = ball.speed *
-              Math.sin((collidePoint * Math.PI) / 4 / (pad.height / 2));
+                Math.sin((collidePoint * Math.PI) / 4 / (pad.height / 2));
 
             ball.speed += ballSpeedInc;
         }
@@ -81,6 +81,7 @@ export class GameService {
             else
                 game.p1Score++;
             void this.updateDbScore(game);
+            game.server.to(`game_${game.id}`).emit('game_data', null);
             if (game.p2Score !== scoreMax && game.p1Score !== scoreMax) {
                 game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
                 this.setInit(game);
@@ -120,7 +121,7 @@ export class GameService {
             // Add velocity to ball
             game.ball.x += game.ball.velocityX;
             game.ball.y += game.ball.velocityY;
-        
+
             // Make sure coordinates stay positive between 0 and 100
             game.ball.x = Math.max(Math.min(game.ball.x, 100), 0);
             game.ball.y = Math.max(Math.min(game.ball.y, 100), 0);
@@ -133,12 +134,22 @@ export class GameService {
                 this.padUp(game.padRight);
             else if (game.padRight.move === PadMove.DOWN)
                 this.padDown(game.padRight);
-            this.formatAndSendData(game);
         }
+        this.formatAndSendData(game);
     }
 
     formatAndSendData(game: Game) {
-        game.server.to(`game_${game.id}`).emit('game_data', { ball: game.ball, padLeft: game.padLeft, padRight: game.padRight, tps: gameTps });
+        game.server.to(`game_${game.id}`).emit('game_data', {
+            ball: game.ball,
+            padLeft: game.padLeft,
+            padRight: game.padRight,
+            tps: gameTps,
+            pause: game.pause,
+            p1Score: game.p1Score,
+            p2Score: game.p2Score,
+            p1: game.p1,
+            p2: game.p2
+        });
     }
 
     padUp(pad: Pad) {
@@ -157,13 +168,13 @@ export class GameService {
 
     async startGame(game: Game) {
         await new Promise(resolve => setTimeout(resolve, startTime));
-        game.interval = setInterval(() => this.gameLoop(game), 1000/gameTps);
+        game.interval = setInterval(() => this.gameLoop(game), 1000 / gameTps);
     }
 
     async updateDbScore(game: Game) {
         try {
-            await this.gameRepository.update(game.dbIdP1, {playerScore: game.p1Score, opponentScore: game.p2Score});
-            await this.gameRepository.update(game.dbIdP2, {playerScore: game.p2Score, opponentScore: game.p1Score});
+            await this.gameRepository.update(game.dbIdP1, { playerScore: game.p1Score, opponentScore: game.p2Score });
+            await this.gameRepository.update(game.dbIdP2, { playerScore: game.p2Score, opponentScore: game.p1Score });
         } catch {
             game.server.to(`game_${game.id}`).emit('error', "could not update score in database");
         }
