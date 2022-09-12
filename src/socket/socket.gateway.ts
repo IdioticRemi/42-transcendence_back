@@ -563,12 +563,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             userId: user.id,
             userNick: user.nickname,
             content: data.content,
+            createdAt: Date.now(),
         };
 
-        const friendSocket = this.socketService.getUserKVByUserId(friend.id);
-
-        if (friendSocket)
-            this.server.to(friendSocket[0]).emit('friend_message', msg);
+        this.sendSocketMsgByUserId(friend.id, 'friend_message', msg);
         client.emit('friend_message', msg);
     }
 
@@ -1325,11 +1323,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const r = this.socketService.movePlayer(user.id, move);
         if (r.status !== 'success') {
-            // client.emit('error', r.message);
             return;
         }
 
-        // console.debug(`${user.nickname} moves ${data}`);
     }
 
     @SubscribeMessage('game_list')

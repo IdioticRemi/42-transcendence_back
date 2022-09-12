@@ -26,6 +26,6 @@ export class MessageEntity {
     content: string;
 
     @Expose()
-    @CreateDateColumn()
+    @CreateDateColumn({type: 'timestamptz'})
     createdAt: Date;
 }
