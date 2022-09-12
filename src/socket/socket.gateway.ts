@@ -1309,7 +1309,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: string,
         @ConnectedSocket() client: Socket,
     ) {
-        console.log(data);
         if (!client || !['ArrowUp', 'ArrowDown', 'Stop'].includes(data)) {
             client.emit('error', "Invalid data");
             return ;
@@ -1326,11 +1325,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const r = this.socketService.movePlayer(user.id, move);
         if (r.status !== 'success') {
-            client.emit('error', r.message);
+            // client.emit('error', r.message);
             return;
         }
 
-        console.debug(`${user.nickname} moves ${data}`);
+        // console.debug(`${user.nickname} moves ${data}`);
     }
 
     @SubscribeMessage('game_list')

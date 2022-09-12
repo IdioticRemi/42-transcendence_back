@@ -5,10 +5,10 @@ import { GameType } from "../entities/game.entity";
 export const baseSpeed = 60;
 export const scoreMax = 3;
 export const startTime = 1e3;
-export const gameTps = 10;
+export const gameTps = 60;
 export const ballStartX = 50;
 export const ballStartY = 6.67;
-export const ballSpeed = (baseSpeed / gameTps);
+export const ballSpeed = (baseSpeed / gameTps); //don't take a ration baseSpeed / gameTps over the padWidth could cause problem with colision detection
 export const ballSize = 2.5;
 export const ballSpeedInc = ballSpeed / 50;
 export const padSpeed = (baseSpeed / gameTps);
