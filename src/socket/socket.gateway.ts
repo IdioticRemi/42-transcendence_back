@@ -1132,6 +1132,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
  
         this.server.to(`game_${gameId}`).emit('success', `Found opponent! Started game with ID: ${gameId}`);
+        this.server.to(`game_${gameId}`).emit('game_info', { p1: r2.payload[0].id, p2: r2.payload[1].id, p1Nick: r2.payload[0].nickname, p2Nick: r2.payload[1].nickname });
         this.server.to(`game_${gameId}`).emit('game_found');
 
         this.gameService.startGame(this.socketService.getGameByGameId(gameId));
@@ -1269,6 +1270,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // Stop queue animation and send to game page??
         this.server.to(`game_${gameId}`).emit('success', 'CREATED GAME WITH ID: ' + gameId);
+        this.server.to(`game_${gameId}`).emit('game_info', { p1: user.id, p2: target.id, p1Nick: user.nickname, p2Nick: target.nickname });
         this.server.to(`game_${gameId}`).emit('game_found');
 
         this.gameService.startGame(this.socketService.getGameByGameId(gameId));

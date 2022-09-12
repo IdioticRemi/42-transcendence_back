@@ -3,7 +3,7 @@ import { Server } from "socket.io";
 export const baseSpeed = 60;
 export const scoreMax = 3;
 export const startTime = 1e3;
-export const gameTps = 60;
+export const gameTps = 10;
 export const ballStartX = 50;
 export const ballStartY = 6.67;
 export const ballSpeed = (baseSpeed / gameTps);
