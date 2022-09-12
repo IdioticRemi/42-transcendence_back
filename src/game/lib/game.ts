@@ -1,4 +1,6 @@
+import { StringifyOptions } from "querystring";
 import { Server } from "socket.io";
+import { GameType } from "../entities/game.entity";
 
 export const baseSpeed = 60;
 export const scoreMax = 3;
@@ -73,9 +75,10 @@ export class Game {
   id: string;
   dbIdP1: number;
   dbIdP2: number;
+  type: GameType;
   spectactors: number[];
 
-  constructor(server: Server, p1: number, p2: number, dbIdP1: number, dbIdP2: number) {
+  constructor(server: Server, p1: number, p2: number, dbIdP1: number, dbIdP2: number, type: GameType) {
     this.server = server;
     this.interval = null;
     this.pause = false;
@@ -90,6 +93,7 @@ export class Game {
     this.id = [p1, p2].sort().join('_');
     this.dbIdP1 = dbIdP1;
     this.dbIdP2 = dbIdP2;
+    this.type = type;
   }
 
 }

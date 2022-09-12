@@ -1333,5 +1333,21 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.debug(`${user.nickname} moves ${data}`);
     }
 
+    @SubscribeMessage('game_list')
+    async getGameList(
+        @ConnectedSocket() client: Socket,
+    ) {
+
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user) {
+            return;
+        }
+
+        const gameList = await this.socketService.getGames();
+
+        client.emit('game_list', gameList);
+
+    }
+
 
 }

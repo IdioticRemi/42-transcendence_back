@@ -184,7 +184,7 @@ export class SocketService {
 
         try {
             gameP2 = await this.gameRepository.save(gameP2);
-            this.games.set(gameId, new Game(server, p1.id, p2.id, gameP1.id, gameP2.id));
+            this.games.set(gameId, new Game(server, p1.id, p2.id, gameP1.id, gameP2.id, type));
         } catch {
             await this.gameRepository.delete(gameP1.id);
             return failureMResponse("could not save to database");
@@ -309,4 +309,26 @@ export class SocketService {
         
         console.debug(gameId, "game deleted");
     }
+
+    async getGames() {
+        return Promise.all([...this.games.values()].map(async (game) => {
+            const p1 = await this.userService.getUserById(game.p1); 
+            const p2 = await this.userService.getUserById(game.p2);
+            
+            if (!p1 || !p2)
+                return null;
+
+            return {
+                id: game.id,
+                p1: game.p1,
+                p2: game.p2,
+                p1Nick: p1.nickname,
+                p2Nick: p2.nickname,
+                p1Score: game.p1Score,
+                p2Score: game.p2Score,
+                type: game.type,
+            }
+        }).filter(g => g !== null));
+    }
+
 }
