@@ -298,6 +298,10 @@ export class SocketService {
         return [...this.invites.values()].find(invites => !!invites.find(i => i.id === userId));
     }
 
+    isSpectating(userId: number) {
+        return [...this.games.values()].find(game => game.spectactors.includes(userId));
+    }
+
     endGame(gameId: string) {
         // final store to DB ??
 

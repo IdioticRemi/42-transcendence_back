@@ -1340,12 +1340,54 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const user = this.socketService.getConnectedUser(client.id);
         if (!user) {
+            client.emit('error', 'Invalid user')
             return;
         }
 
         const gameList = await this.socketService.getGames();
 
         client.emit('game_list', gameList);
+
+    }
+
+    @SubscribeMessage('game_spectate')
+    async spectateGame(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: string,
+    ) {
+        const user = this.socketService.getConnectedUser(client.id);
+        if (!user) {
+            client.emit('error', 'Invalid user')
+            return;
+        }
+
+        if (this.socketService.isInGame(user.id) || this.socketService.isInviting(user.id) || this.socketService.isInQueue(user.id) || this.socketService.isSpectating(user.id)) {
+            client.emit('error', "You are already playing, queuing or spectating");
+            return;
+        }
+
+        
+        const gameId = data;
+        const game = this.socketService.getGameByGameId(gameId);
+        if (!game) {
+            client.emit('error', 'Invalid game');
+            return;
+        }
+
+        const p1 = await this.userService.getUserById(game.p1); 
+        const p2 = await this.userService.getUserById(game.p2);
+        
+        if (!p1 || !p2) {
+            client.emit('error', 'Invalid game data');
+            return;
+
+        }
+
+
+        game.spectactors.push(user.id);
+        client.join(`game_${game.id}`);
+        client.emit('game_found');
+        client.emit('game_info', {p1: game.p1, p2: game.p2, p1Nick: p1.nickname, p2Nick: p2.nickname});
 
     }
 
