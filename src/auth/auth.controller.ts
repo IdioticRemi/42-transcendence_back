@@ -1,6 +1,10 @@
-import {Controller, Get, Query, Res,} from '@nestjs/common';
+import {Body, Controller, Get, Post, Query, Req, Res, UseGuards,} from '@nestjs/common';
 import {AuthorizationService} from './auth.service';
 import {UsersService} from "../users/users.service";
+import { UserTokenGuard } from './auth.guard';
+import { Request, Response } from 'express';
+import { failureMResponse } from 'lib/MResponse';
+import { toFileStream } from 'qrcode';
 
 @Controller('auth')
 export class AuthorizationController {
@@ -42,5 +46,37 @@ export class AuthorizationController {
         if (user)
             res.redirect(`http://localhost:8081/login?token=${user.token}`);
         else res.redirect('http://localhost:8081/login?token=null');
+    }
+
+    @UseGuards(UserTokenGuard)
+    @Post('generate')
+    async generate(
+        @Req() req: Request,
+        @Res() res: Response
+    ) {
+        const r = await this.authorizationService.generate2faSecret(req.user);
+        if (r.status === 'success')
+            return toFileStream(res, r.payload.keyuri);
+        return r;
+    }
+
+    @UseGuards(UserTokenGuard)
+    @Post('enable-2fa')
+    async enable2fa(
+        @Req() req: Request,
+        @Body('2fa_code') code: string
+    ) {
+        const isCodeValid = this.authorizationService.verify2faToken(req.user, code);
+        if (!isCodeValid)
+            return failureMResponse("invalid 2fa code");
+        return await this.authorizationService.enable2fa(req.user);
+    }
+
+    @UseGuards(UserTokenGuard)
+    @Post('disable-2fa')
+    async disable2fa(
+        @Req() req: Request
+    ) {
+        return await this.authorizationService.disable2fa(req.user);
     }
 }

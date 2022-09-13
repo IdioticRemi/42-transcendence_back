@@ -27,6 +27,18 @@ export class UserEntity {
     })
     token: string;
 
+    @Expose()
+    @Column({
+        default: false
+    })
+    otp_enabled: boolean;
+
+    @Exclude()
+    @Column({
+        default: ""
+    })
+    otp_secret: string;
+
     @Column({
         default: defaultAvatar
     })

@@ -42,6 +42,7 @@ import {SocketModule} from './socket/socket.module';
     ],
     controllers: [AppController],
     providers: [AppService, AuthorizationStrategy],
+    exports: [ConfigModule]
 })
 export class AppModule implements NestModule {
     constructor(private dataSource: DataSource) {

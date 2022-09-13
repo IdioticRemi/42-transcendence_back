@@ -18,7 +18,7 @@ export class UsersService {
         @InjectRepository(UserEntity)
         private usersRepository: Repository<UserEntity>,
         @InjectRepository(GameEntity)
-        private gameRepository: Repository<GameEntity>
+        private gameRepository: Repository<GameEntity>,
     ) {
     }
 

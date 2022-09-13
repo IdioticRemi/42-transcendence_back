@@ -6,6 +6,7 @@ import {TypeOrmModule} from '@nestjs/typeorm';
 import {ChannelEntity} from "../channel/entities/channel.entity";
 import { GameModule } from 'src/game/game.module';
 import { GameEntity } from 'src/game/entities/game.entity';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
     imports: [TypeOrmModule.forFeature([UserEntity, ChannelEntity, GameEntity])],

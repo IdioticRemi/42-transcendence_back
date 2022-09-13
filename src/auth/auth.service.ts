@@ -9,6 +9,8 @@ import * as fs from 'fs';
 import axios from 'axios';
 import {UsersService} from 'src/users/users.service';
 import {plainToClass} from "class-transformer";
+import { totp, authenticator } from 'otplib';
+import { failureMResponse, MResponse, successMResponse } from 'lib/MResponse';
 
 
 @Injectable()
@@ -154,4 +156,43 @@ export class AuthorizationService {
         console.log(`AUTH: EXISTING USER: ${user.username}`);
         return user;
     }
+
+    async generate2faSecret(user: UserEntity): Promise<MResponse<{secret: string, keyuri: string}>> {
+        if (user.otp_enabled)
+            return failureMResponse("2fa is already enabled");
+
+        user.otp_secret = authenticator.generateSecret();
+
+        const keyuri = authenticator.keyuri(user.username, "Transcendence", user.otp_secret);
+
+        return this.userRepository.save(user)
+                    .then(() => {return successMResponse({ secret: user.otp_secret, keyuri })})
+                    .catch(() => {return failureMResponse("database error")});
+    }
+
+    async enable2fa(user: UserEntity) {
+        if (user.otp_enabled)
+            return failureMResponse("2fa is already enabled");
+        user.otp_enabled = true;
+        return this.userRepository.save(user)
+                    .then(() => {return successMResponse(true)})
+                    .catch(() => {return failureMResponse("database error")});
+    }
+
+    disable2fa(user: UserEntity) {
+        if (user.otp_secret === "")
+            return failureMResponse("2fa already disabled");
+
+        user.otp_secret = "";
+        user.otp_enabled = false;
+
+        return this.userRepository.save(user)
+                    .then(() => {return successMResponse(true)})
+                    .catch(() => {return failureMResponse("database error")});
+    }
+
+    verify2faToken(user: UserEntity, code: string) {
+        return authenticator.verify({token: code, secret: user.otp_secret});
+    }
+
 }
