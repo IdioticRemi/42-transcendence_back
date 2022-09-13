@@ -133,6 +133,29 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
                     this.server.to(friend[0]).emit("friend_status", { id: user.id, status: 'offline' });
                 }
             });
+
+            // SEND MESSAGES TO RECIPIENTS
+            // Is inviting someone?
+            if (this.socketService.isInviting(user.id)) {
+                const target = [...this.socketService.invites.entries()].find(([id, invite]) => invite.find((i) => i.id === user.id));
+                this.socketService.invites.set(target[0], target[1].filter(i => i.id !== user.id));
+            }
+            // Is invited by people?
+            if (this.socketService.invites.has(user.id)) {
+                this.socketService.invites.delete(user.id);
+            }
+            // NO MESSAGE
+            // Is spectating a game?
+            if (this.socketService.isSpectating(user.id)) {
+                const game = [...this.socketService.games.values()].find(g => g.spectactors.find(s => s === user.id));
+                game.spectactors = game.spectactors.filter(s => s !== user.id);
+            }
+            if (this.socketService.matchmakingClassic.includes(user.id)) {
+                this.socketService.matchmakingClassic = this.socketService.matchmakingClassic.filter(u => u !== user.id);
+            }
+            if (this.socketService.matchmakingCustom.includes(user.id)) {
+                this.socketService.matchmakingCustom = this.socketService.matchmakingCustom.filter(u => u !== user.id);
+            }
         }
 
         this.socketService.disconnectUser(client.id);

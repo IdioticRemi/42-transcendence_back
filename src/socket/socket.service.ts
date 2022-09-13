@@ -19,10 +19,10 @@ export class SocketService {
 
     private users: Map<string, UserEntity>;
     private messages: Map<string, {friendId: number, userId: number, userNick: string, content: string, createdAt: Date}[]>;
-    private matchmakingClassic: number[];
-    private matchmakingCustom: number[];
-    private invites: Map<number, Invite[]>; // Map.get(userID) returns every userID that invited him
-    private games: Map<string, Game>;
+    public matchmakingClassic: number[];
+    public matchmakingCustom: number[];
+    public invites: Map<number, Invite[]>; // Map.get(userID) returns every userID that invited him
+    public games: Map<string, Game>;
 
     constructor(
         private userService: UsersService,
@@ -345,6 +345,6 @@ export class SocketService {
         }).filter(g => g !== null));
     }
 
-    
+
 
 }
