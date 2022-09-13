@@ -346,8 +346,6 @@ export class UsersService {
             v.winRate = (v.gamesWon / v.gamesPlayed) * 100;
         })
 
-        console.debug(leaderboard);
-
         const r = ([...leaderboard.values()].filter(g => g.gamesPlayed >= 0).sort((a, b) => {
             if (a.winRate !== b.winRate)
                 return b.winRate - a.winRate;
