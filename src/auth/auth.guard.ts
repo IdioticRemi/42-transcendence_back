@@ -6,6 +6,9 @@ export class UserTokenGuard implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const req = context.switchToHttp().getRequest() as Request;
 
+        if (req.path === '/users/leaderboard')
+            return true;
+
         if (!req.user)
             return false;
 

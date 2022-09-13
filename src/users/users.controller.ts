@@ -22,7 +22,7 @@ import {UsersService} from './users.service';
 import {Express, Response} from 'express';
 import {diskStorage} from 'multer';
 import {extname} from 'path';
-import {maxUploadSize} from 'lib';
+import {defaultAvatar, maxUploadSize} from 'lib';
 import {plainToClass} from 'class-transformer';
 import {UserTokenGuard} from 'src/auth/auth.guard';
 import { GameEntity } from 'src/game/entities/game.entity';
@@ -84,10 +84,15 @@ export class UsersController {
     @Get('avatar/:user/*')
     @Header('Cache-Control', 'none')
     async getFile(
-        @Param('user') user: string,
+        @Param('user', ParseIntPipe) user: number,
         @Res() res: Response
     ): Promise<void> {
-        const userResult = await this.usersService.getUserByUsername(user);
+        const userResult = await this.usersService.getUserById(user);
+
+        if (!userResult) {
+            res.sendFile(defaultAvatar, {root: './'});
+            return;
+        }
         res.sendFile(userResult.img_path, {root: './'});
     }
 
@@ -154,4 +159,11 @@ export class UsersController {
     ): Promise<MResponse<GameEntityDto[]>> {
         return await this.usersService.getUserGames(userId);
     }
+
+    @Get('leaderboard')
+    async getLeaderboard() {
+        return await this.usersService.getLeaderboard();
+    }
+    
+
 }

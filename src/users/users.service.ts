@@ -317,4 +317,52 @@ export class UsersService {
         )));
     }
 
+    async getLeaderboard() {
+        const games = await this.gameRepository.find({
+            relations: ['player']
+        }).catch();
+
+        if (!games)
+            return failureMResponse("could not get game history");
+
+        const leaderboard = new Map<number, LeaderboardUser>();
+
+        games.forEach((game) => {
+            const userGames = leaderboard.get(game.player.id);
+            if (!userGames) {
+                leaderboard.set(game.player.id, {
+                    id: game.player.id,
+                    nickname: game.player.nickname,
+                    gamesWon: Number(game.playerScore > game.opponentScore),
+                    gamesPlayed: 1,
+                });
+            } else {
+                ++userGames.gamesPlayed;
+                userGames.gamesWon += Number(game.playerScore > game.opponentScore);
+            }
+        });
+
+        leaderboard.forEach((v) => {
+            v.winRate = v.gamesWon / v.gamesPlayed;
+        })
+
+        console.debug(leaderboard);
+
+        const r = ([...leaderboard.values()].filter(g => g.gamesPlayed >= 5).sort((a, b) => {
+            if (a.winRate !== b.winRate)
+                return a.winRate - b.winRate;
+            return a.gamesPlayed - b.gamesPlayed;
+        }));
+
+        return successMResponse(r);
+    }
+
+}
+
+interface LeaderboardUser {
+    id: number;
+    nickname: string;
+    gamesWon: number;
+    gamesPlayed: number;
+    winRate?: number;
 }
