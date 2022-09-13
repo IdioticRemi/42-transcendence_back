@@ -106,6 +106,9 @@ export class AuthorizationService {
             while (alreadyExist) {
                 alreadyExist = !!(await this.usersService.getUserByNickname(nickname));
 
+                if (!alreadyExist)
+                    break;
+
                 nickname = username + '_';
                 const characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
                 const charactersLength = characters.length;
