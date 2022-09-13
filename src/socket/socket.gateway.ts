@@ -38,6 +38,10 @@ export class SocketMessage {
     payload: any;
 }
 
+function isObject(o: any) {
+    return (!!o) && (o.constructor === Object);
+}
+
 @WebSocketGateway({cors: true})
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
@@ -165,7 +169,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -196,7 +200,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('private' in data) || !('name' in data) || /^\s*$/.test(data.name)) {
+        if (!user || !isObject(data) || !('private' in data) || !('name' in data) || /^\s*$/.test(data.name)) {
             client.emit('error', 'cannot create this channel');
             return;
         }
@@ -234,7 +238,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('isPrivate' in data) || !('name' in data) || !('password' in data) || /^\s*$/.test(data.name)) {
+        if (!user || !isObject(data) || !('isPrivate' in data) || !('name' in data) || !('password' in data) || /^\s*$/.test(data.name)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -282,7 +286,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -323,7 +327,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelName' in data)) return;
+        if (!user || !isObject(data) || !('channelName' in data)) return;
 
         const channel = await this.channelService.getChannelByName(data.channelName, [
             'messages',
@@ -379,7 +383,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -427,7 +431,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             user = this.socketService.getConnectedUser(client.id);
         }
 
-        if (!user || !('channelId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
@@ -473,7 +477,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data) || !('content' in data) || /^\s*$/.test(data.content)) {
+        if (!user || !isObject(data) || !('channelId' in data) || !('content' in data) || /^\s*$/.test(data.content)) {
             client.emit('error', `Invalid data or empty message`);
             return;
         }
@@ -533,7 +537,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('friendId' in data) || !('content' in data) || /^\s*$/.test(data.content))  {
+        if (!user || !isObject(data) || !('friendId' in data) || !('content' in data) || /^\s*$/.test(data.content))  {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -602,7 +606,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('user' in data)) {
+        if (!user || !isObject(data) || !('user' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -653,7 +657,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('friendId' in data)) {
+        if (!user || !isObject(data) || !('friendId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -694,7 +698,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         const userData = await this.userService.getUserById(user.id, ['friends']);
 
-        if (!user || !userData || !('userId' in data)) {
+        if (!user || !isObject(data) || !userData || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -736,7 +740,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         const userData = await this.userService.getUserById(user.id);
 
-        if (!user || !userData || !('userId' in data)) {
+        if (!user || !isObject(data) || !userData || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -766,7 +770,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !data.newNick || /^\s*$/.test(data.newNick)) {
+        if (!user || !isObject(data) || !data.newNick || /^\s*$/.test(data.newNick)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -796,7 +800,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -825,7 +829,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data) || !('userId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data) || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -871,7 +875,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data) || !('userId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data) || !('userId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -918,7 +922,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -947,7 +951,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data) || !('userId' in data) || !('sanction' in data) || !data.duration) {
+        if (!user || !isObject(data) || !('channelId' in data) || !('userId' in data) || !('sanction' in data) || !data.duration) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -992,7 +996,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !('channelId' in data) || !('userId' in data) || !('sanction' in data)) {
+        if (!user || !isObject(data) || !('channelId' in data) || !('userId' in data) || !('sanction' in data)) {
             client.emit('error', `Invalid data`);
             return;
         }
@@ -1065,7 +1069,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { type: GameType },
         @ConnectedSocket() client: Socket,
     ) {
-        if (!client || !("type" in data)) {
+        if (!client || !isObject(data) || !("type" in data)) {
             client.emit('error', "Invalid data");
             return;
         }
@@ -1170,7 +1174,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     ) {
         const user = this.socketService.getConnectedUser(client.id);
-        if (!user || !('nickname' in data) || !('type' in data)) {
+        if (!user || !isObject(data) || !('nickname' in data) || !('type' in data)) {
             client.emit('error', "Invalid data");
             return;
         }
@@ -1202,7 +1206,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     ) {
         const user = this.socketService.getConnectedUser(client.id);
-        if (!user || !('nickname' in data) || !('type' in data)) {
+        if (!user || !isObject(data) || !('nickname' in data) || !('type' in data)) {
             client.emit('error', "Invalid data");
             return;
         }
@@ -1228,7 +1232,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     ) {
         const user = this.socketService.getConnectedUser(client.id);
-        if (!user || !('id' in data) || !('type' in data)) {
+        if (!user || !isObject(data) || !('id' in data) || !('type' in data)) {
             client.emit('error', "Invalid data");
             return;
         }
@@ -1275,7 +1279,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     ) {
         const user = this.socketService.getConnectedUser(client.id);
-        if (!user || !('id' in data) || !('type' in data)) {
+        if (!user || !isObject(data) || !isObject(data) || !('id' in data) || !('type' in data)) {
             client.emit('error', "Invalid data");
             return;
         }
