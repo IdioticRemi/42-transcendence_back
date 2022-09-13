@@ -343,15 +343,15 @@ export class UsersService {
         });
 
         leaderboard.forEach((v) => {
-            v.winRate = v.gamesWon / v.gamesPlayed;
+            v.winRate = (v.gamesWon / v.gamesPlayed) * 100;
         })
 
         console.debug(leaderboard);
 
-        const r = ([...leaderboard.values()].filter(g => g.gamesPlayed >= 5).sort((a, b) => {
+        const r = ([...leaderboard.values()].filter(g => g.gamesPlayed >= 0).sort((a, b) => {
             if (a.winRate !== b.winRate)
-                return a.winRate - b.winRate;
-            return a.gamesPlayed - b.gamesPlayed;
+                return b.winRate - a.winRate;
+            return b.gamesPlayed - a.gamesPlayed;
         }));
 
         return successMResponse(r);

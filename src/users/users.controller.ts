@@ -41,6 +41,12 @@ export class UsersController {
         return this.usersService.getAllUsers();
     }
 
+
+    @Get('leaderboard')
+    async getLeaderboard() {
+        return await this.usersService.getLeaderboard();
+    }
+
     @UseGuards(UserTokenGuard)
     @Get(':id')
     async getUserById(
@@ -160,10 +166,6 @@ export class UsersController {
         return await this.usersService.getUserGames(userId);
     }
 
-    @Get('leaderboard')
-    async getLeaderboard() {
-        return await this.usersService.getLeaderboard();
-    }
     
 
 }
