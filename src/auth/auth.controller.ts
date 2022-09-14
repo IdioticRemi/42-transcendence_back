@@ -70,6 +70,7 @@ export class AuthorizationController {
         @Req() req: Request,
         @Body('2fa_code') code: string
     ) {
+        console.debug("code", code);
         const isCodeValid = this.authorizationService.verify2faToken(req.user, code);
         if (!isCodeValid)
             return failureMResponse("invalid 2fa code");

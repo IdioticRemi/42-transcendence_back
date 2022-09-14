@@ -174,8 +174,10 @@ export class AuthorizationService {
         if (user.otp_enabled)
             return failureMResponse("2fa is already enabled");
         user.otp_enabled = true;
+        const token = authenticator.generate(user.otp_secret);
+        console.debug('2fa-token :', token);
         return this.userRepository.save(user)
-                    .then(() => {return successMResponse(true)})
+                    .then(() => {return successMResponse({token})})
                     .catch(() => {return failureMResponse("database error")});
     }
 
