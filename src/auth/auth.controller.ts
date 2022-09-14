@@ -3,8 +3,8 @@ import {AuthorizationService} from './auth.service';
 import {UsersService} from "../users/users.service";
 import { UserTokenGuard } from './auth.guard';
 import { Request, Response } from 'express';
-import { failureMResponse } from 'lib/MResponse';
-import { toFileStream } from 'qrcode';
+import { failureMResponse, successMResponse } from 'lib/MResponse';
+import { toDataURL, toFileStream } from 'qrcode';
 
 @Controller('auth')
 export class AuthorizationController {
@@ -52,11 +52,15 @@ export class AuthorizationController {
     @Post('generate')
     async generate(
         @Req() req: Request,
-        @Res() res: Response
     ) {
         const r = await this.authorizationService.generate2faSecret(req.user);
-        if (r.status === 'success')
-            return toFileStream(res, r.payload.keyuri);
+        if (r.status === 'success') {
+            try {
+                return successMResponse(await toDataURL(r.payload.keyuri));
+            } catch {
+                return failureMResponse("failed to generate qrcode")
+            }
+        }
         return r;
     }
 
