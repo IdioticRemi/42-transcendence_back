@@ -142,6 +142,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
             // Is invited by people?
             if (this.socketService.invites.has(user.id)) {
+                const invites = this.socketService.invites.get(user.id);
+                invites.forEach((invite) => {
+                    this.refuseInvite(invite, client);
+                });
                 this.socketService.invites.delete(user.id);
             }
             // NO MESSAGE
