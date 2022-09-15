@@ -11,6 +11,7 @@ import {UsersService} from 'src/users/users.service';
 import {plainToClass} from "class-transformer";
 import { totp, authenticator } from 'otplib';
 import { failureMResponse, MResponse, successMResponse } from 'lib/MResponse';
+import * as jwt from 'jsonwebtoken'
 
 
 @Injectable()
@@ -45,7 +46,6 @@ export class AuthorizationService {
         const token = await fetch("https://api.intra.42.fr/oauth/token", options)
             .then(async (response) => {
                 const json = await response.json() as JsonResponseInterface;
-                // console.log("token request's response:", json);
                 if (!response.ok) {
                     return Promise.reject(json.message);
                 }
@@ -59,6 +59,8 @@ export class AuthorizationService {
     }
 
     async getUser(token: string): Promise<UserEntity | undefined> {
+        
+        // authenticate user with 42intra token
         const options = {
             method: "GET",
             headers: {
@@ -76,7 +78,9 @@ export class AuthorizationService {
                     const id42 = json.id;
                     const username = json.login;
                     console.log("id:", id42, "username:", username, "token:", token);
-                    return await this.logUser(id42, username, token);
+                    // exchange intra token with jwt
+                    const jwtoken = jwt.sign({userId: id42}, token, {expiresIn: "24h"})
+                    return await this.logUser(id42, username, jwtoken);
                 } else
                     return undefined;
             })
@@ -174,11 +178,7 @@ export class AuthorizationService {
         if (user.otp_enabled)
             return failureMResponse("2fa is already enabled");
         user.otp_enabled = true;
-        const token = authenticator.generate(user.otp_secret);
-        console.debug('2fa-token :', token);
-        return this.userRepository.save(user)
-                    .then(() => {return successMResponse({token})})
-                    .catch(() => {return failureMResponse("database error")});
+        return await this.update2faToken(user);
     }
 
     disable2fa(user: UserEntity) {
@@ -196,5 +196,16 @@ export class AuthorizationService {
     verify2faToken(user: UserEntity, code: string) {
         return authenticator.verify({token: code, secret: user.otp_secret});
     }
+
+    async update2faToken(user: UserEntity) {
+        const token =  jwt.sign({userId: user.id}, user.otp_secret);
+        // 2fa token replace 42intra token
+        user.token = token;
+        console.debug('2fa-token :', token);
+        return this.userRepository.save(user)
+                    .then(() => {return successMResponse({token})})
+                    .catch(() => {return failureMResponse("database error")});
+    }
+
 
 }

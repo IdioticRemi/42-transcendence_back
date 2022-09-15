@@ -84,7 +84,7 @@ export class UsersController {
         if (!req.file)
             return failureMResponse("could not find file in body");
 
-        return await this.usersService.updateAvatar(req.user.username, file.path);;
+        return await this.usersService.updateAvatar(req.user.username, file.path);
     }
 
     @Get('avatar/:user/*')
