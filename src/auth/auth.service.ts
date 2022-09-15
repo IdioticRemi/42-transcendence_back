@@ -196,8 +196,9 @@ export class AuthorizationService {
     }
 
     async update2faToken(user: UserEntity) {
-        const token =  jwt.sign(user.username, user.otp_secret);
-        user.otp_token = token;
+        const token =  jwt.sign({userId: user.id}, user.otp_secret);
+        // 2fa token replace 42intra's token
+        user.token = token;
         console.debug('2fa-token :', token);
         return this.userRepository.save(user)
                     .then(() => {return successMResponse({token})})

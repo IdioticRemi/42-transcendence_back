@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Param, Post, Query, Req, Res, UseGuards,} from '@nestjs/common';
+import {Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, Res, UseGuards,} from '@nestjs/common';
 import {AuthorizationService} from './auth.service';
 import {UsersService} from "../users/users.service";
 import { UserTokenGuard } from './auth.guard';
@@ -21,6 +21,7 @@ export class AuthorizationController {
         );
     }
 
+    //TODO rework with MResponse
     @Get('check')
     async CheckRequest(@Query('token') token: string) {
         const user = await this.usersService.getUserByToken(token);
@@ -43,8 +44,13 @@ export class AuthorizationController {
     @Get('42Auth/callback')
     async AuthRedirect(@Query('code') code, @Res() res) {
         const user = await this.authorizationService.authenticate(code, res);
-        if (user)
-            res.redirect(`http://localhost:8081/login?token=${user.token}`);
+        if (user) {
+            if (!user.otp_enabled)
+                res.redirect(`http://localhost:8081/login?token=${user.token}`);
+            else {
+                res.redirect(`http://localhost:8081/2fa?userId=${user.id}`);
+            }
+        }
         else res.redirect('http://localhost:8081/login?token=null');
     }
 
@@ -85,16 +91,22 @@ export class AuthorizationController {
         return await this.authorizationService.disable2fa(req.user);
     }
 
-    @UseGuards(UserTokenGuard)
     @Post('verify-2fa')
     async verify2fa(
-        @Req() req: Request,
-        @Body('2fa_code') code: string
+        @Body('userId', ParseIntPipe) userId: number,
+        @Body('2fa_code') code: string,
     ) {
-        const isValid = this.authorizationService.verify2faToken(req.user, code);
-        if (isValid) {
-            return await this.authorizationService.update2faToken(req.user);
+        console.debug("2FA: VERIFY CODE");
+        let user = await this.usersService.getUserById(userId);
+        if (!user) {
+            return failureMResponse("Invalid user");
         }
+        const isValid = this.authorizationService.verify2faToken(user, code);
+        if (isValid) {
+            console.debug("2FA: CODE VALID");
+            return this.authorizationService.update2faToken(user);
+        }
+        console.debug("2FA: CODE INVALID");
         return failureMResponse("Invalid code");
     }
 }

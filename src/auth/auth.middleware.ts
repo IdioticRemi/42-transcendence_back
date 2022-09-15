@@ -20,7 +20,6 @@ export class UserInfoMiddleware implements NestMiddleware {
         const token = auth_header.split(" ")[1];
         console.debug(`MIDDLEWARE: Token: ${token}`);
 
-
         try {
             req.user = await this.userService.getUserByToken(token);
         } catch (e) {
