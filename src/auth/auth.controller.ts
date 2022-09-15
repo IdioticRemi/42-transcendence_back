@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Post, Query, Req, Res, UseGuards,} from '@nestjs/common';
+import {Body, Controller, Get, Param, Post, Query, Req, Res, UseGuards,} from '@nestjs/common';
 import {AuthorizationService} from './auth.service';
 import {UsersService} from "../users/users.service";
 import { UserTokenGuard } from './auth.guard';
@@ -83,5 +83,18 @@ export class AuthorizationController {
         @Req() req: Request
     ) {
         return await this.authorizationService.disable2fa(req.user);
+    }
+
+    @UseGuards(UserTokenGuard)
+    @Post('verify-2fa')
+    async verify2fa(
+        @Req() req: Request,
+        @Body('2fa_code') code: string
+    ) {
+        const isValid = this.authorizationService.verify2faToken(req.user, code);
+        if (isValid) {
+            return await this.authorizationService.update2faToken(req.user);
+        }
+        return failureMResponse("Invalid code");
     }
 }

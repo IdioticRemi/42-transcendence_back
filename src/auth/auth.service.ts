@@ -11,6 +11,7 @@ import {UsersService} from 'src/users/users.service';
 import {plainToClass} from "class-transformer";
 import { totp, authenticator } from 'otplib';
 import { failureMResponse, MResponse, successMResponse } from 'lib/MResponse';
+import * as jwt from 'jsonwebtoken'
 
 
 @Injectable()
@@ -174,11 +175,7 @@ export class AuthorizationService {
         if (user.otp_enabled)
             return failureMResponse("2fa is already enabled");
         user.otp_enabled = true;
-        const token = authenticator.generate(user.otp_secret);
-        console.debug('2fa-token :', token);
-        return this.userRepository.save(user)
-                    .then(() => {return successMResponse({token})})
-                    .catch(() => {return failureMResponse("database error")});
+        return await this.update2faToken(user);
     }
 
     disable2fa(user: UserEntity) {
@@ -186,6 +183,7 @@ export class AuthorizationService {
             return failureMResponse("2fa already disabled");
 
         user.otp_secret = "";
+        user.otp_token = "";
         user.otp_enabled = false;
 
         return this.userRepository.save(user)
@@ -196,5 +194,15 @@ export class AuthorizationService {
     verify2faToken(user: UserEntity, code: string) {
         return authenticator.verify({token: code, secret: user.otp_secret});
     }
+
+    async update2faToken(user: UserEntity) {
+        const token =  jwt.sign(user.username, user.otp_secret);
+        user.otp_token = token;
+        console.debug('2fa-token :', token);
+        return this.userRepository.save(user)
+                    .then(() => {return successMResponse({token})})
+                    .catch(() => {return failureMResponse("database error")});
+    }
+
 
 }
