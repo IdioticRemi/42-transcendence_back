@@ -46,7 +46,6 @@ export class AuthorizationService {
         const token = await fetch("https://api.intra.42.fr/oauth/token", options)
             .then(async (response) => {
                 const json = await response.json() as JsonResponseInterface;
-                // console.log("token request's response:", json);
                 if (!response.ok) {
                     return Promise.reject(json.message);
                 }
@@ -60,6 +59,8 @@ export class AuthorizationService {
     }
 
     async getUser(token: string): Promise<UserEntity | undefined> {
+        
+        // authenticate user with 42intra token
         const options = {
             method: "GET",
             headers: {
@@ -77,7 +78,9 @@ export class AuthorizationService {
                     const id42 = json.id;
                     const username = json.login;
                     console.log("id:", id42, "username:", username, "token:", token);
-                    return await this.logUser(id42, username, token);
+                    // exchange intra token with jwt
+                    const jwtoken = jwt.sign({userId: id42}, token, {expiresIn: "24h"})
+                    return await this.logUser(id42, username, jwtoken);
                 } else
                     return undefined;
             })
@@ -183,7 +186,6 @@ export class AuthorizationService {
             return failureMResponse("2fa already disabled");
 
         user.otp_secret = "";
-        user.otp_token = "";
         user.otp_enabled = false;
 
         return this.userRepository.save(user)
@@ -197,7 +199,7 @@ export class AuthorizationService {
 
     async update2faToken(user: UserEntity) {
         const token =  jwt.sign({userId: user.id}, user.otp_secret);
-        // 2fa token replace 42intra's token
+        // 2fa token replace 42intra token
         user.token = token;
         console.debug('2fa-token :', token);
         return this.userRepository.save(user)

@@ -39,12 +39,6 @@ export class UserEntity {
     })
     otp_secret: string;
 
-    @Exclude()
-    @Column({
-        default: ""
-    })
-    otp_token: string;
-
     @Column({
         default: defaultAvatar
     })
