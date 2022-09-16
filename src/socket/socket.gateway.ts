@@ -27,6 +27,7 @@ import { MsgMaxSize } from 'lib';
 import { GameService } from 'src/game/game.service';
 import { forwardRef, Inject } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import * as moment from 'moment';
 
 export class UserPermission {
     id: number;
@@ -88,7 +89,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         try {
-            jwt.verify(client.handshake.headers.authorization, process.env.JWT_SECRET);
+            const r = jwt.verify(client.handshake.headers.authorization, process.env.JWT_SECRET) as unknown as {userId: number, exp: number, iot: number};
+
+            client.emit('success', `Your token will expire ${moment(r.exp * 1000).fromNow()}`);
         } catch (e)  {
             client.disconnect();            
             return;
@@ -127,7 +130,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         user.channels.forEach(c => {
             client.join(`channel_${c.id}`);
             client.emit('channel_info', plainToClass(ChannelDto, c, {excludeExtraneousValues: true}));
-        })
+        });
     }
 
     async handleDisconnect(client: Socket) {

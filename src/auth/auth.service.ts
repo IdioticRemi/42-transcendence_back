@@ -80,7 +80,7 @@ export class AuthorizationService {
                     console.log("id:", id42, "username:", username, "token:", token);
                     // exchange intra token with jwt
                     const secret = authenticator.generateSecret();
-                    const jwtoken = jwt.sign({userId: id42}, process.env.JWT_SECRET, {expiresIn: "24h"})
+                    const jwtoken = jwt.sign({userId: id42}, process.env.JWT_SECRET, {expiresIn: "3d"})
                     return await this.logUser(id42, username, jwtoken);
                 } else
                     return undefined;
@@ -199,7 +199,7 @@ export class AuthorizationService {
     }
 
     async update2faToken(user: UserEntity) {
-        const token =  jwt.sign({userId: user.id}, process.env.JWT_SECRET, {expiresIn:"24h"});
+        const token =  jwt.sign({userId: user.id}, process.env.JWT_SECRET, {expiresIn:"3d"});
         // 2fa token replace 42intra token
         user.token = token;
         console.debug('2fa-token :', token);

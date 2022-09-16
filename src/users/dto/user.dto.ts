@@ -1,5 +1,5 @@
 import {Expose} from "class-transformer";
-import {IsDate, IsNotEmpty, IsNumber, IsOptional, IsString} from "class-validator";
+import {IsBoolean, IsDate, IsNotEmpty, IsNumber, IsOptional, IsString} from "class-validator";
 
 export class AddUserDto {
 
@@ -33,6 +33,10 @@ export class SendUserDto {
     @IsDate()
     @IsNotEmpty()
     createdAt: string;
+
+    @Expose()
+    @IsBoolean()
+    otp_enabled: boolean;
 
     @Expose()
     @IsDate()
