@@ -305,13 +305,20 @@ export class UsersService {
     }
 
     async getUserGames(userId: number): Promise<MResponse<GameEntityDto[]>> {
-        const user = await this.getUserById(userId, ['games', 'games.player', 'games.opponent']);
+        const games = await this.gameRepository.find({
+            where: {
+                player: {
+                    id: userId,
+                }
+            }, relations: ['player', 'opponent']
+        });
 
-        if (!user) {
+        if (!games) {
             return failureMResponse("Invalid user");
         }
 
-        return successMResponse(user.games.map((game) => plainToClass(GameEntityDto, {
+
+        return successMResponse(games.map((game) => plainToClass(GameEntityDto, {
                 id: game.id,
                 type: game.type,
                 playerId: game.player.id,
