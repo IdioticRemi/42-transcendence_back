@@ -159,8 +159,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             // NO MESSAGE
             // Is spectating a game?
             if (this.socketService.isSpectating(user.id)) {
-                const game = [...this.socketService.games.values()].find(g => g.spectactors.find(s => s === user.id));
-                game.spectactors = game.spectactors.filter(s => s !== user.id);
+                const game = [...this.socketService.games.values()].find(g => g.spectators.find(s => s === user.id));
+                game.spectators = game.spectators.filter(s => s !== user.id);
             }
             if (this.socketService.matchmakingClassic.includes(user.id)) {
                 this.socketService.matchmakingClassic = this.socketService.matchmakingClassic.filter(u => u !== user.id);
@@ -1412,7 +1412,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
 
-        game.spectactors.push(user.id);
+        game.spectators.push(user.id);
         client.join(`game_${game.id}`);
         client.emit('game_found');
         client.emit('game_info', {p1: game.p1, p2: game.p2, p1Nick: p1.nickname, p2Nick: p2.nickname});

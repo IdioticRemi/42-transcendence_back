@@ -309,7 +309,7 @@ export class SocketService {
     }
 
     isSpectating(userId: number) {
-        return [...this.games.values()].find(game => game.spectactors.includes(userId));
+        return [...this.games.values()].find(game => game.spectators.includes(userId));
     }
 
     endGame(gameId: string) {
