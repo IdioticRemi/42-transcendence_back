@@ -9,8 +9,15 @@ import {defaultAvatar} from 'lib';
 import {ChannelEntity} from 'src/channel/entities/channel.entity';
 import {plainToClass} from 'class-transformer';
 import { GameEntity } from 'src/game/entities/game.entity';
-import { identity } from 'rxjs';
 import { GameEntityDto } from 'src/game/dto/game.dto';
+
+interface LeaderboardUser {
+    id: number;
+    nickname: string;
+    gamesWon: number;
+    gamesPlayed: number;
+    winRate?: number;
+}
 
 @Injectable()
 export class UsersService {
@@ -355,12 +362,4 @@ export class UsersService {
         return successMResponse(r);
     }
 
-}
-
-interface LeaderboardUser {
-    id: number;
-    nickname: string;
-    gamesWon: number;
-    gamesPlayed: number;
-    winRate?: number;
 }
