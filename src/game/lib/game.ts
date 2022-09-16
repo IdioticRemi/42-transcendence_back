@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import { GameType } from "../entities/game.entity";
 
 export const numActPerSendData = 2;
-export const baseSpeed = 120;
+export const baseSpeed = 100;
 export const scoreMax = 3;
 export const startTime = 1e3;
 export const gameTps = 120;
