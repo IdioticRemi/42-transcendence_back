@@ -79,7 +79,8 @@ export class AuthorizationService {
                     const username = json.login;
                     console.log("id:", id42, "username:", username, "token:", token);
                     // exchange intra token with jwt
-                    const jwtoken = jwt.sign({userId: id42}, token, {expiresIn: "24h"})
+                    const secret = authenticator.generateSecret();
+                    const jwtoken = jwt.sign({userId: id42}, process.env.JWT_SECRET, {expiresIn: "24h"})
                     return await this.logUser(id42, username, jwtoken);
                 } else
                     return undefined;
@@ -127,7 +128,7 @@ export class AuthorizationService {
                 "id": parseInt(id42),
                 "username": username,
                 "nickname": nickname,
-                "token": token
+                "token": token,
             })
                 .catch(() => {
                     console.log("cannot register user", username)
@@ -154,7 +155,7 @@ export class AuthorizationService {
             return newUser;
         }
         if (user.token !== token) {
-            await this.userRepository.update({id: user.id}, {token});
+            await this.userRepository.update({id: user.id}, {token}).catch();
             user.token = token;
         }
         console.log(`AUTH: EXISTING USER: ${user.username}`);
@@ -198,7 +199,7 @@ export class AuthorizationService {
     }
 
     async update2faToken(user: UserEntity) {
-        const token =  jwt.sign({userId: user.id}, user.otp_secret);
+        const token =  jwt.sign({userId: user.id}, process.env.JWT_SECRET, {expiresIn:"24h"});
         // 2fa token replace 42intra token
         user.token = token;
         console.debug('2fa-token :', token);

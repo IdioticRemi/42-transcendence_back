@@ -26,6 +26,7 @@ import { UserEntity } from 'src/users/entities/user.entity';
 import { MsgMaxSize } from 'lib';
 import { GameService } from 'src/game/game.service';
 import { forwardRef, Inject } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 
 export class UserPermission {
     id: number;
@@ -83,6 +84,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.debug("SOCKET: verifying user connection")
         if (!client.handshake.headers.authorization) {
             client.disconnect();
+            return;
+        }
+
+        try {
+            jwt.verify(client.handshake.headers.authorization, process.env.JWT_SECRET);
+        } catch (e)  {
+            client.disconnect();            
             return;
         }
 

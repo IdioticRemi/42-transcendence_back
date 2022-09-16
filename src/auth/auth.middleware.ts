@@ -1,7 +1,9 @@
 import {Injectable, NestMiddleware} from '@nestjs/common';
 import {NextFunction, Request, Response} from 'express';
 import fetch from "node-fetch";
+import { authenticator } from 'otplib';
 import {UsersService} from 'src/users/users.service';
+
 
 @Injectable()
 export class UserInfoMiddleware implements NestMiddleware {
@@ -16,10 +18,9 @@ export class UserInfoMiddleware implements NestMiddleware {
             next();
             return;
         }
-
         const token = auth_header.split(" ")[1];
         console.debug(`MIDDLEWARE: Token: ${token}`);
-
+        
         try {
             req.user = await this.userService.getUserByToken(token);
         } catch (e) {

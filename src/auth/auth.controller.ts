@@ -5,6 +5,9 @@ import { UserTokenGuard } from './auth.guard';
 import { Request, Response } from 'express';
 import { failureMResponse, successMResponse } from 'lib/MResponse';
 import { toDataURL, toFileStream } from 'qrcode';
+import { plainToClass } from 'class-transformer';
+import { SendUserDto } from 'src/users/dto/user.dto';
+import * as jwt from 'jsonwebtoken';
 
 @Controller('auth')
 export class AuthorizationController {
@@ -23,24 +26,17 @@ export class AuthorizationController {
         );
     }
 
-    //TODO rework with MResponse
     @Get('check')
     async CheckRequest(@Query('token') token: string) {
         const user = await this.usersService.getUserByToken(token);
-        if (user) {
-            delete user.token;
-            return {
-                message: 'Token is valid',
-                content: user,
-                error: false,
-            };
-        } else {
-            return {
-                message: 'Token is invalid',
-                content: null,
-                error: true,
-            };
+        try {
+            if (!user)
+                throw new Error("Invalid user");
+            jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return failureMResponse('Token is invalid');
         }
+        return successMResponse(plainToClass(SendUserDto, user, {excludeExtraneousValues: true}));
     }
 
     @Get('42Auth/callback')
