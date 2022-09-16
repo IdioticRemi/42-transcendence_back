@@ -1165,7 +1165,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
  
-        this.server.to(`game_${gameId}`).emit('success', `Found opponent! Started game with ID: ${gameId}`);
+        this.server.to(`game_${gameId}`).emit('success', `Found opponent! Starting game...`);
         this.server.to(`game_${gameId}`).emit('game_info', { p1: r2.payload[0].id, p2: r2.payload[1].id, p1Nick: r2.payload[0].nickname, p2Nick: r2.payload[1].nickname });
         this.server.to(`game_${gameId}`).emit('game_found');
 

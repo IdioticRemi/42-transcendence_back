@@ -34,13 +34,7 @@ export class AuthorizationService {
         }
         const options = {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "http://127.0.0.1:3000",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Allow-Methods": "POST",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         };
         const token = await fetch("https://api.intra.42.fr/oauth/token", options)

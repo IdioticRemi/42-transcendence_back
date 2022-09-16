@@ -94,7 +94,6 @@ export class GameService {
     }
 
     async gameLoop(game: Game) {
-        const hrStart = process.hrtime();
         if (!game.pause) {
             this.checkWin(game);
             if (game.p1Score === scoreMax || game.p2Score === scoreMax) {
@@ -109,7 +108,7 @@ export class GameService {
                 if (!winnerObj) winnerNick = "sample_nick";
                 else winnerNick = winnerObj.nickname;
 
-                game.server.to(`game_${game.id}`).emit('success', `user ${winner} won the game ${winnerScore} - ${loserScore}`);
+                game.server.to(`game_${game.id}`).emit('success', `user ${winnerNick} won the game ${winnerScore} - ${loserScore}`);
                 game.server.to(`game_${game.id}`).emit('game_ended', { winnerNick, winnerId: winner, winnerScore, loserScore });
                 this.socketService.endGame(game.id);
 
@@ -171,8 +170,6 @@ export class GameService {
                     (game.padRight.move === PadMove.UP && game.badCmdP2))
                 this.padDown(game.padRight);
         }
-        const hrEnd = process.hrtime(hrStart);
-        console.info('Execution time: %dms', hrEnd[1] / 1000000);
         if (game.sendTest === numActPerSendData) {
             this.formatAndSendData(game);
             game.sendTest = 1;
