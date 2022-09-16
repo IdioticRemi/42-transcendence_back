@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SocketService } from 'src/socket/socket.service';
 import { Repository } from 'typeorm';
 import { GameEntity } from './entities/game.entity';
-import { Game } from './lib/game';
+import {Game} from './lib/game';
 import { Ball } from './lib/game';
 import { Pad } from './lib/game';
 import { PadMove } from './lib/game';
@@ -13,8 +13,8 @@ import { gameTps } from "./lib/game";
 import { ballStartX } from "./lib/game";
 import { ballStartY } from "./lib/game";
 import { ballSpeed } from "./lib/game";
-import { ballSpeedInc } from "./lib/game";
 import { padStartY } from "./lib/game";
+import { numActPerSendData } from "./lib/game";
 
 @Injectable()
 export class GameService {
@@ -51,17 +51,17 @@ export class GameService {
     checkWalls(ball: Ball) {
         if (
             (ball.y <= 0 && ball.velocityY < 0) ||
-            (ball.y + ball.size >= 100 && ball.velocityY > 0)
+            (ball.y + ball.sizeY >= 100 && ball.velocityY > 0)
         )
             ball.velocityY = -ball.velocityY;
     }
 
     checkPad(pad: Pad, ball: Ball) {
         if (
-            ball.y + ball.size > pad.y &&
+            ball.y + ball.sizeY > pad.y &&
             ball.y < pad.y + pad.height
         ) {
-            const collidePoint = ball.y + ball.size / 2 -
+            const collidePoint = ball.y + ball.sizeY / 2 -
                 (pad.y + pad.height / 2);
 
             ball.velocityX = (pad.x > 50 ? -1 : 1) * Math.abs(ball.speed *
@@ -70,12 +70,16 @@ export class GameService {
             ball.velocityY = ball.speed *
                 Math.sin((collidePoint * Math.PI) / 4 / (pad.height / 2));
 
-            ball.speed += ballSpeedInc;
+            ball.speed += ball.accel;
+            if (ball.speed >= pad.width) {
+                ball.speed = pad.width - 0.05;
+                ball.accel = 0;
+            }
         }
     }
 
     checkWin(game: Game) {
-        if (game.ball.x <= 0 || game.ball.x + game.ball.size >= 100) {
+        if (game.ball.x <= 0 || game.ball.x + game.ball.sizeX >= 100) {
             if (game.ball.x <= 0)
                 game.p2Score++;
             else
@@ -90,6 +94,7 @@ export class GameService {
     }
 
     async gameLoop(game: Game) {
+        const hrStart = process.hrtime();
         if (!game.pause) {
             this.checkWin(game);
             if (game.p1Score === scoreMax || game.p2Score === scoreMax) {
@@ -111,10 +116,14 @@ export class GameService {
                 return;
             }
             this.checkWalls(game.ball);
-            if (game.ball.x <= game.padLeft.x + game.padLeft.width && game.ball.velocityX < 0) {
+            if (game.ball.x <= game.padLeft.x + game.padLeft.width &&
+                game.ball.x + game.ball.sizeX >= game.padLeft.x &&
+                game.ball.velocityX < 0) {
                 this.checkPad(game.padLeft, game.ball);
             }
-            else if (game.ball.x + game.ball.size >= game.padRight.x && game.ball.velocityX > 0) {
+            else if (game.ball.x + game.ball.sizeX >= game.padRight.x &&
+                    game.ball.x <= game.padRight.x + game.padRight.width &&
+                    game.ball.velocityX > 0) {
                 this.checkPad(game.padRight, game.ball);
             }
 
@@ -123,19 +132,53 @@ export class GameService {
             game.ball.y += game.ball.velocityY;
 
             // Make sure coordinates stay positive between 0 and 100
-            game.ball.x = Math.max(Math.min(game.ball.x, 100), 0);
-            game.ball.y = Math.max(Math.min(game.ball.y, 100), 0);
+            game.ball.x = Math.min(game.ball.x, 100 - game.ball.sizeX);
+            game.ball.x = Math.max(game.ball.x, 0);
+            game.ball.y = Math.min(game.ball.y, 100 - game.ball.sizeY);
+            game.ball.y = Math.max(game.ball.y, 0);
 
-            if (game.padLeft.move === PadMove.UP)
+            if (game.setTrigger &&
+                (game.triggerZone.x - game.triggerSpeed > 0) &&
+                (game.triggerZone.x + game.triggerZone.height + (game.triggerSpeed / 2))) {
+                game.triggerZone.x -= game.triggerSpeed / 2;
+                game.triggerZone.height += game.triggerSpeed;
+            }
+
+            if (game.isInTrigger === false && game.setTrigger &&
+                game.ball.x <= game.triggerZone.x + game.triggerZone.width &&
+                game.ball.x + game.ball.sizeX >= game.triggerZone.x &&
+                game.ball.y <= game.triggerZone.y + game.triggerZone.height &&
+                game.ball.y + game.ball.sizeY >= game.triggerZone.y) {
+                if (game.ball.velocityX > 0)
+                    game.badCmdP2 = !game.badCmdP2;
+                else
+                    game.badCmdP1 = !game.badCmdP1;
+                game.isInTrigger = true;
+            }
+            else
+                game.isInTrigger = false;
+
+            if ((game.padLeft.move === PadMove.UP && !game.badCmdP1) ||
+                (game.padLeft.move === PadMove.DOWN && game.badCmdP1))
                 this.padUp(game.padLeft);
-            else if (game.padLeft.move === PadMove.DOWN)
+            else if ((game.padLeft.move === PadMove.DOWN && !game.badCmdP1) ||
+                    (game.padLeft.move === PadMove.UP && game.badCmdP1))
                 this.padDown(game.padLeft);
-            if (game.padRight.move === PadMove.UP)
+            if ((game.padRight.move === PadMove.UP && !game.badCmdP2) ||
+                (game.padRight.move === PadMove.DOWN && game.badCmdP2))
                 this.padUp(game.padRight);
-            else if (game.padRight.move === PadMove.DOWN)
+            else if ((game.padRight.move === PadMove.DOWN && !game.badCmdP2) ||
+                    (game.padRight.move === PadMove.UP && game.badCmdP2))
                 this.padDown(game.padRight);
         }
-        this.formatAndSendData(game);
+        const hrEnd = process.hrtime(hrStart);
+        console.info('Execution time: %dms', hrEnd[1] / 1000000);
+        if (game.sendTest === numActPerSendData) {
+            this.formatAndSendData(game);
+            game.sendTest = 1;
+        }
+        else
+            game.sendTest++;
     }
 
     formatAndSendData(game: Game) {
@@ -144,6 +187,7 @@ export class GameService {
             padLeft: game.padLeft,
             padRight: game.padRight,
             tps: gameTps,
+            actPerSendData: numActPerSendData,
             pause: game.pause,
             p1Score: game.p1Score,
             p2Score: game.p2Score,
