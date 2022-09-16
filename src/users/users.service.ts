@@ -85,7 +85,7 @@ export class UsersService {
 
         const newPath = path.replace('.tmp', '');
         try {
-            if (newPath.split('.').reverse()[0] !== userResult.img_path.split('.').reverse()[0])
+            if (newPath.split('.').reverse()[0] !== userResult.img_path.split('.').reverse()[0] && userResult.img_path != defaultAvatar)
                 fs.unlinkSync(userResult.img_path);
             fs.renameSync(path, newPath);
         } catch {}
