@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import { GameType } from "../entities/game.entity";
 
 export const numActPerSendData = 2;
-export const baseSpeed = 100;
+export const baseSpeed = 120;
 export const scoreMax = 3;
 export const startTime = 1e3;
 export const gameTps = 120;
@@ -72,12 +72,14 @@ export class TriggerZone {
   y: number;
   height: number;
   width: number;
+  speed: number;
 
-  constructor(posX: number, posY: number, height: number, width: number) {
+  constructor(posX: number, posY: number, height: number, width: number, speed: number) {
     this.x = posX;
     this.y = posY;
     this.height = height;
     this.width = width;
+    this.speed = speed;
   }
 }
 
@@ -100,9 +102,9 @@ export class Game {
   type: GameType;
   spectators: number[];
   setTrigger: boolean;
-  triggerSpeed: number;
   isInTrigger: boolean;
   triggerZone: TriggerZone;
+  packetId: number;
 
   constructor(server: Server,
               p1: number,
@@ -113,7 +115,6 @@ export class Game {
               customPadHeight= padHeight,
               customBallSpeed = ballSpeed,
               customAccelBall = 0,
-              triggerSpeed = 0,
               setTrigger = false) {
     this.server = server;
     this.interval = null;
@@ -136,7 +137,8 @@ export class Game {
     else
       this.setTrigger = true;
     this.isInTrigger = false;
-    this.triggerZone = new TriggerZone(47, 46, 8, 6);
+    this.triggerZone = new TriggerZone(47, 46, 8, 6, ballSpeed / 5);
+    this.packetId = 0;
   }
 
 }

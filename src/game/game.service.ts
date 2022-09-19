@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SocketService } from 'src/socket/socket.service';
 import { Repository } from 'typeorm';
 import { GameEntity, GameType } from './entities/game.entity';
-import {Game} from './lib/game';
+import {Game, TriggerZone} from './lib/game';
 import { Ball } from './lib/game';
 import { Pad } from './lib/game';
 import { PadMove } from './lib/game';
@@ -147,11 +147,13 @@ export class GameService {
             game.ball.y = Math.min(game.ball.y, 100 - game.ball.sizeY);
             game.ball.y = Math.max(game.ball.y, 0);
 
-            if (game.setTrigger &&
-                (game.triggerZone.x - game.triggerSpeed > 0) &&
-                (game.triggerZone.x + game.triggerZone.height + (game.triggerSpeed / 2))) {
-                game.triggerZone.x -= game.triggerSpeed / 2;
-                game.triggerZone.height += game.triggerSpeed;
+            if (game.setTrigger) {
+                if (game.triggerZone.y + game.triggerZone.speed > 0 && game.triggerZone.y + game.triggerZone.height + game.triggerZone.speed < 100)
+                    game.triggerZone.y += game.triggerZone.speed;
+                else {
+                    game.triggerZone.y -= game.triggerZone.speed;
+                    game.triggerZone.speed = -game.triggerZone.speed;
+                }
             }
 
             if (game.isInTrigger === false && game.setTrigger &&
@@ -188,6 +190,7 @@ export class GameService {
 
     formatAndSendData(game: Game) {
         game.server.to(`game_${game.id}`).emit('game_data', {
+            packetId: game.packetId++,
             ball: game.ball,
             padLeft: game.padLeft,
             padRight: game.padRight,
@@ -196,6 +199,7 @@ export class GameService {
             p1Score: game.p1Score,
             p2Score: game.p2Score,
             triggerZone: game.triggerZone,
+            triggerActive: game.setTrigger,
             type: game.type,
             p1: game.p1,
             p2: game.p2
@@ -214,7 +218,7 @@ export class GameService {
     padDown(pad: Pad) {
         if (pad.y + pad.reversed * pad.speed <= 0)
             pad.y = 0;
-        else if (pad.y + pad.height + pad.speed >= 100)
+        else if (pad.y + pad.height + pad.reversed * pad.speed >= 100)
             pad.y = 100 - pad.height;
         else
             pad.y += pad.reversed * pad.speed;
