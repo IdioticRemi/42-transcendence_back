@@ -54,6 +54,7 @@ export class Pad {
   width: number;
   speed: number;
   move: number;
+  reversed: number;
 
   constructor(startX: number, height: number) {
     this.x = startX;
@@ -62,6 +63,7 @@ export class Pad {
     this.width = padWidth;
     this.speed = padSpeed;
     this.move = PadMove.STATIC;
+    this.reversed = 1;
   }
 }
 
@@ -97,8 +99,6 @@ export class Game {
   dbIdP2: number;
   type: GameType;
   spectators: number[];
-  badCmdP1: boolean;
-  badCmdP2: boolean;
   setTrigger: boolean;
   triggerSpeed: number;
   isInTrigger: boolean;
@@ -114,7 +114,6 @@ export class Game {
               customBallSpeed = ballSpeed,
               customAccelBall = 0,
               triggerSpeed = 0,
-              badCmd = false,
               setTrigger = false) {
     this.server = server;
     this.interval = null;
@@ -132,8 +131,6 @@ export class Game {
     this.dbIdP1 = dbIdP1;
     this.dbIdP2 = dbIdP2;
     this.type = type;
-    this.badCmdP1 = badCmd;
-    this.badCmdP2 = badCmd;
     this.setTrigger = setTrigger;
     this.isInTrigger = false;
     this.triggerZone = new TriggerZone(47, 46, 8, 6);

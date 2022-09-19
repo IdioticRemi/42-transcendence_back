@@ -150,25 +150,21 @@ export class GameService {
                 game.ball.y <= game.triggerZone.y + game.triggerZone.height &&
                 game.ball.y + game.ball.sizeY >= game.triggerZone.y) {
                 if (game.ball.velocityX > 0)
-                    game.badCmdP2 = !game.badCmdP2;
+                    game.padRight.reversed = game.padRight.reversed * -1;
                 else
-                    game.badCmdP1 = !game.badCmdP1;
+                    game.padLeft.reversed = game.padLeft.reversed * -1;
                 game.isInTrigger = true;
             }
             else
                 game.isInTrigger = false;
 
-            if ((game.padLeft.move === PadMove.UP && !game.badCmdP1) ||
-                (game.padLeft.move === PadMove.DOWN && game.badCmdP1))
+            if (game.padLeft.move === PadMove.UP)
                 this.padUp(game.padLeft);
-            else if ((game.padLeft.move === PadMove.DOWN && !game.badCmdP1) ||
-                    (game.padLeft.move === PadMove.UP && game.badCmdP1))
+            else if (game.padLeft.move === PadMove.DOWN)
                 this.padDown(game.padLeft);
-            if ((game.padRight.move === PadMove.UP && !game.badCmdP2) ||
-                (game.padRight.move === PadMove.DOWN && game.badCmdP2))
+            if (game.padRight.move === PadMove.UP)
                 this.padUp(game.padRight);
-            else if ((game.padRight.move === PadMove.DOWN && !game.badCmdP2) ||
-                    (game.padRight.move === PadMove.UP && game.badCmdP2))
+            else if (game.padRight.move === PadMove.DOWN)
                 this.padDown(game.padRight);
         }
         if (game.sendTest === numActPerSendData && !game.pause) {
@@ -188,23 +184,29 @@ export class GameService {
             pause: game.pause,
             p1Score: game.p1Score,
             p2Score: game.p2Score,
+            triggerZone: game.triggerZone,
+            type: game.type,
             p1: game.p1,
             p2: game.p2
         });
     }
 
     padUp(pad: Pad) {
-        if (pad.y - pad.speed <= 0)
+        if (pad.y - pad.reversed * pad.speed <= 0)
             pad.y = 0;
+        else if (pad.y + pad.height - pad.reversed * pad.speed >= 100)
+            pad.y = 100 - pad.height;
         else
-            pad.y -= pad.speed;
+            pad.y -= pad.reversed * pad.speed;
     }
 
     padDown(pad: Pad) {
-        if (pad.y + pad.height + pad.speed >= 100)
+        if (pad.y + pad.reversed * pad.speed <= 0)
+            pad.y = 0;
+        else if (pad.y + pad.height + pad.speed >= 100)
             pad.y = 100 - pad.height;
         else
-            pad.y += pad.speed;
+            pad.y += pad.reversed * pad.speed;
     }
 
     async startGame(game: Game) {
