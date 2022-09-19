@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SocketService } from 'src/socket/socket.service';
 import { Repository } from 'typeorm';
-import { GameEntity } from './entities/game.entity';
+import { GameEntity, GameType } from './entities/game.entity';
 import {Game} from './lib/game';
 import { Ball } from './lib/game';
 import { Pad } from './lib/game';
@@ -15,6 +15,10 @@ import { ballStartY } from "./lib/game";
 import { ballSpeed } from "./lib/game";
 import { padStartY } from "./lib/game";
 import { numActPerSendData } from "./lib/game";
+
+function randNumber(min: number, max: number) {
+    return Math.max(Math.min(Math.random() * (max - min + 1) + min, max), min);
+}
 
 @Injectable()
 export class GameService {
@@ -36,6 +40,11 @@ export class GameService {
         game.ball.velocityY = game.ball.speed * Math.sin(Math.PI / 4);
         this.padInit(game.padLeft);
         this.padInit(game.padRight);
+        if (game.type === GameType.CUSTOM) {
+            game.setTrigger = true;
+            game.triggerZone.x = randNumber(40, 60);
+            game.triggerZone.y = randNumber(0, 100 - game.triggerZone.height);
+        }
         this.formatAndSendData(game);
         game.pause = true;
         this.formatAndSendData(game);
@@ -48,6 +57,7 @@ export class GameService {
     padInit(pad: Pad) {
         pad.y = padStartY;
         pad.move = PadMove.STATIC;
+        pad.reversed = 1;
     }
 
     checkWalls(ball: Ball) {
@@ -153,6 +163,7 @@ export class GameService {
                     game.padRight.reversed = game.padRight.reversed * -1;
                 else
                     game.padLeft.reversed = game.padLeft.reversed * -1;
+                game.setTrigger = false;
                 game.isInTrigger = true;
             }
             else

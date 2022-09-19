@@ -131,7 +131,10 @@ export class Game {
     this.dbIdP1 = dbIdP1;
     this.dbIdP2 = dbIdP2;
     this.type = type;
-    this.setTrigger = setTrigger;
+    if (type === GameType.CLASSIC)
+      this.setTrigger = false;
+    else
+      this.setTrigger = true;
     this.isInTrigger = false;
     this.triggerZone = new TriggerZone(47, 46, 8, 6);
   }
