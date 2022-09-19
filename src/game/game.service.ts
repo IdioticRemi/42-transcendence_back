@@ -36,7 +36,9 @@ export class GameService {
         game.ball.velocityY = game.ball.speed * Math.sin(Math.PI / 4);
         this.padInit(game.padLeft);
         this.padInit(game.padRight);
+        this.formatAndSendData(game);
         game.pause = true;
+        this.formatAndSendData(game);
         setTimeout(() => {
             game.pause = false
         }, startTime);
@@ -84,11 +86,10 @@ export class GameService {
                 game.p2Score++;
             else
                 game.p1Score++;
-            void this.updateDbScore(game);
-            game.server.to(`game_${game.id}`).emit('game_data', null);
+            this.updateDbScore(game);
+            this.setInit(game);
             if (game.p2Score !== scoreMax && game.p1Score !== scoreMax) {
                 game.server.to(`game_${game.id}`).emit('success', `Score: ${game.p1Score} - ${game.p2Score}`);
-                this.setInit(game);
             }
         }
     }
@@ -170,11 +171,11 @@ export class GameService {
                     (game.padRight.move === PadMove.UP && game.badCmdP2))
                 this.padDown(game.padRight);
         }
-        if (game.sendTest === numActPerSendData) {
+        if (game.sendTest === numActPerSendData && !game.pause) {
             this.formatAndSendData(game);
             game.sendTest = 1;
         }
-        else
+        else if (!game.pause)
             game.sendTest++;
     }
 

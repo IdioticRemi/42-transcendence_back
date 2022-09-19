@@ -15,7 +15,7 @@ services:
     ports:
     - "5432:5432"
     networks:
-    - db_network
+    - t_network
 
   pgadmin:
     image: dpage/pgadmin4
@@ -31,8 +31,30 @@ services:
     - ./pgadmin:/var/lib/pgadmin
     - ./pgadmin_server.json:/pgadmin4/servers.json
     networks:
-    - db_network
+    - t_network
+
+  nestjs:
+    image: node:alpine3.15
+    container_name: nestjs
+    build: .
+    #build: ./back
+    depends_on:
+      - postgres
+    restart: always
+    networks:
+    - t_network
+    env_file: .env
+
+  # vuejs:
+  #   image: node:alpine3.15
+  #   container_name: nestjs
+  #   build: ./front
+  #   restart: always
+  #   networks:
+  #   - t_network
+
+
 
 networks:
-  db_network:
+  t_network:
 
