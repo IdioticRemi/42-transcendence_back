@@ -18,5 +18,7 @@ RUN npm install
 # Bundle app source
 COPY . /usr/src/app
 
+#TODO: SLL certification creation
+
 EXPOSE 3000
 CMD [ "node", "dist/src/main.js" ]

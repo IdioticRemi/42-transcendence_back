@@ -35,3 +35,10 @@
 - GET     /auth/42Auth/callback
 
 ### GameController {/game}
+
+
+### SSL Certificate
+
+`openssl genrsa -out key.pem`
+`openssl req -new -key key.pem -out csr.pem`
+`openssl req -x509 -nodes -days 360 -newkey rsa:2048 -keyout ./cert/key.pem -out ./cert/cert.pem -subj "/C=FR/ST=Rhone/L=Lyon/O=42Lyon/CN=mdesoeuv"`
