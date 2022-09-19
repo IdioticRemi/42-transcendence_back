@@ -18,7 +18,9 @@ RUN npm install
 # Bundle app source
 COPY . /usr/src/app
 
-#TODO: SLL certification creation
+# SSL certification creation
+RUN apk add openssl
+RUN mkdir -p cert ; `openssl req -x509 -nodes -days 360 -newkey rsa:2048 -keyout ./cert/key.pem -out ./cert/cert.pem -subj "/C=FR/ST=Rhone/L=Lyon/O=42Lyon/CN=mdesoeuv"`
 
 EXPOSE 3000
 CMD [ "node", "dist/src/main.js" ]
