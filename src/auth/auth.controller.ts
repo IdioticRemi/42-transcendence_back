@@ -44,12 +44,12 @@ export class AuthorizationController {
         const user = await this.authorizationService.authenticate(code, res);
         if (user) {
             if (!user.otp_enabled)
-                res.redirect(`https://${process.env.BACKEND_IP}:8081/login?token=${user.token}`);
+                res.redirect(`https://${process.env.BACKEND_IP}/login?token=${user.token}`);
             else {
-                res.redirect(`https://${process.env.BACKEND_IP}:8081/2fa?userId=${user.id}`);
+                res.redirect(`https://${process.env.BACKEND_IP}/2fa?userId=${user.id}`);
             }
         }
-        else res.redirect(`https://${process.env.BACKEND_IP}:8081/login?token=null`);
+        else res.redirect(`https://${process.env.BACKEND_IP}/login?token=null`);
     }
 
     @UseGuards(UserTokenGuard)
