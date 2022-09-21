@@ -1139,6 +1139,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.emit('error', "Invalid data");
             return;
         }
+
+        if (data.type !== GameType.CLASSIC && data.type !== GameType.CUSTOM) {
+            client.emit('error', "Invalid game type");
+            return;
+        }
+
         const user = this.socketService.getConnectedUser(client.id)
         if (!user) {
             client.emit('error', 'Invalid user GAME_ADD_QUEUE');
@@ -1245,6 +1251,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
+        if (data.nickname.length < 4 || data.nickname.length > 16 || /^\s*$/.test(data.nickname)) {
+            client.emit('error', 'Nickname length is 4 to 16 characters');
+            return;
+        }
+
         if (this.socketService.isInGame(user.id)) {
             client.emit('error', 'You cannot invite while in game');
             return;
@@ -1274,6 +1285,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         if (!user || !isObject(data) || !('nickname' in data) || !('type' in data)) {
             client.emit('error', "Invalid data");
+            return;
+        }
+
+        if (data.nickname.length < 4 || data.nickname.length > 16 || /^\s*$/.test(data.nickname)) {
+            client.emit('error', 'Nickname length is 4 to 16 characters');
             return;
         }
 
