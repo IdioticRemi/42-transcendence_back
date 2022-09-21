@@ -841,7 +841,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (data.newNick.length > 16 || data.newNick.length < 4) {
+        if (data.newNick.length > 16 || data.newNick.trim().length < 4) {
             client.emit('error', `Nickname must include 4 to 16 characters`);
             return;
         }
