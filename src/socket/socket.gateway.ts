@@ -23,7 +23,7 @@ import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
 import { PadMove } from 'src/game/lib/game';
 import { UserEntity } from 'src/users/entities/user.entity';
-import { MsgMaxSize } from 'lib';
+import { channelNameMaxSize, msgMaxSize, nicknameMaxSize, nicknameMinSize, passwordMaxSize } from 'lib';
 import { GameService } from 'src/game/game.service';
 import { forwardRef, Inject } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
@@ -243,7 +243,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (/^\s*$/.test(data.name) || data.name.length > 30) {
+        if (/^\s*$/.test(data.name) || data.name.length > channelNameMaxSize) {
             client.emit('error', 'Channel name invalid');
             return;
         }
@@ -251,7 +251,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if ('password' in data)
             data.private = true;
 
-        if (data.private == true && (data.password.length > 20 || /^\s*$/.test(data.password))) {
+        if (data.private == true && (data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
             client.emit('error', 'Channel password invalid');
             return;
         }
@@ -292,7 +292,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         
-        if (/^\s*$/.test(data.name) || data.name.length > 30) {
+        if (/^\s*$/.test(data.name) || data.name.length > channelNameMaxSize) {
             client.emit('error', 'Channel name invalid');
             return;
         }
@@ -303,7 +303,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (data.password !== '')
         data.isPrivate = true;
         
-        if (data.isPrivate == true && (data.password.length > 20 || /^\s*$/.test(data.password))) {
+        if (data.isPrivate == true && (data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
             client.emit('error', 'Channel password invalid');
             return;
         }
@@ -389,6 +389,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!user || !isObject(data) || !('channelName' in data)) return;
 
+        if (data.channelName.length > channelNameMaxSize) {
+            client.emit('error', "Invalid channel name");
+            return;
+        }
+
         const channel = await this.channelService.getChannelByName(data.channelName, [
             'messages',
             'admins',
@@ -401,7 +406,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         if (channel.password !== "") {
-            if (!('password' in data)) {
+            if (!('password' in data) || data.password.length > passwordMaxSize) {
                 client.emit('error', `Invalid password`);
                 return;
             }
@@ -542,8 +547,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (data.content.length > MsgMaxSize) {
-            client.emit("error", `You cannot send more than ${MsgMaxSize} characters`);
+        if (data.content.length > msgMaxSize) {
+            client.emit("error", `You cannot send more than ${msgMaxSize} characters`);
             return;
         }
 
@@ -603,8 +608,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
 
-        if (data.content.length > MsgMaxSize) {
-            client.emit("error", `You cannot send more than ${MsgMaxSize} characters`);
+        if (data.content.length > msgMaxSize) {
+            client.emit("error", `You cannot send more than ${msgMaxSize} characters`);
             return;
         }
 
@@ -841,8 +846,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (data.newNick.length > 16 || data.newNick.trim().length < 4) {
-            client.emit('error', `Nickname must include 4 to 16 characters`);
+        if (data.newNick.length > nicknameMaxSize || data.newNick.trim().length < nicknameMinSize) {
+            client.emit('error', `Nickname must include ${nicknameMinSize} to ${nicknameMaxSize} characters`);
             return;
         }
 
