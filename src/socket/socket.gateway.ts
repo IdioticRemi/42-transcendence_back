@@ -238,13 +238,23 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !isObject(data) || !('private' in data) || !('name' in data) || /^\s*$/.test(data.name)) {
+        if (!user || !isObject(data) || !('private' in data) || !('name' in data)) {
             client.emit('error', 'cannot create this channel');
+            return;
+        }
+
+        if (/^\s*$/.test(data.name) || data.name.length > 30) {
+            client.emit('error', 'Channel name invalid');
             return;
         }
 
         if ('password' in data)
             data.private = true;
+
+        if (data.private == true && (data.password.length > 20 || /^\s*$/.test(data.password))) {
+            client.emit('error', 'Channel password invalid');
+            return;
+        }
 
         const ret = await this.channelService.createChannel(user.id, data.name, data.password || "", data.private);
 
@@ -276,15 +286,27 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !isObject(data) || !('isPrivate' in data) || !('name' in data) || !('password' in data) || /^\s*$/.test(data.name)) {
+        if (!user || !isObject(data) || !('isPrivate' in data) || !('name' in data) || !('password' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
 
+        
+        if (/^\s*$/.test(data.name) || data.name.length > 30) {
+            client.emit('error', 'Channel name invalid');
+            return;
+        }
+        
+        
         data.name = data.name.trim();
-
+        
         if (data.password !== '')
-            data.isPrivate = true;
+        data.isPrivate = true;
+        
+        if (data.isPrivate == true && (data.password.length > 20 || /^\s*$/.test(data.password))) {
+            client.emit('error', 'Channel password invalid');
+            return;
+        }
 
         const channel = await this.channelService.getChannelById(data.channelId, ['messages', 'admins']);
 
@@ -577,6 +599,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!user || !isObject(data) || !('friendId' in data) || !('content' in data) || /^\s*$/.test(data.content))  {
             client.emit('error', `Invalid data`);
+            return;
+        }
+
+
+        if (data.content.length > MsgMaxSize) {
+            client.emit("error", `You cannot send more than ${MsgMaxSize} characters`);
             return;
         }
 
