@@ -318,7 +318,6 @@ export class SocketService {
     }
 
     endGame(gameId: string) {
-        // final store to DB ??
 
         const { server } = this.games.get(gameId);
         
