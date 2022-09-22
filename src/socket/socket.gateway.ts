@@ -307,7 +307,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (data.password !== '')
         data.isPrivate = true;
         
-        if (data.isPrivate == true && (data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
+        if (data.isPrivate == true && data.password.length > 0 && (data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
             client.emit('error', 'Channel password invalid');
             return;
         }
@@ -326,7 +326,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         channel.isPrivate = data.isPrivate;
         try {
-            if (channel.password !== "")
+            if (data.password !== "")
                 channel.password = await argon2.hash(data.password);
         } catch {
             client.emit('error', 'Password hashing failed');
