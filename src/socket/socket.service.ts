@@ -221,6 +221,11 @@ export class SocketService {
 
     inviteUser(myUserId: number, targetUserId: number, type: GameType): MResponse<boolean> {
 
+
+        if (type !== GameType.CLASSIC && type !== GameType.CUSTOM) {
+            return failureMResponse("Invalid game type");
+        }
+
         if (this.isInQueue(myUserId)) {
             return failureMResponse("You are already in queue for a game");
         }
@@ -313,7 +318,6 @@ export class SocketService {
     }
 
     endGame(gameId: string) {
-        // final store to DB ??
 
         const { server } = this.games.get(gameId);
         
