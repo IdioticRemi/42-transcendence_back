@@ -251,9 +251,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if ('password' in data)
             data.private = true;
 
-        if (data.private == true && ( !data.password || data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
-            client.emit('error', 'Channel password invalid');
-            return;
+        if (data.private == true && 'password' in data) {
+            if (data.password && (data.password.length == 0 || data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
+                client.emit('error', 'Channel password invalid');
+                return;
+            }
         }
 
         const ret = await this.channelService.createChannel(user.id, data.name, data.password || "", data.private);
@@ -300,10 +302,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         
         data.name = data.name.trim();
         
+        if (!data.password)
+            data.password = '';
         if (data.password !== '')
         data.isPrivate = true;
         
-        if (data.isPrivate == true && (!data.password || data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
+        if (data.isPrivate == true && (data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
             client.emit('error', 'Channel password invalid');
             return;
         }
