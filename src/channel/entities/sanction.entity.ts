@@ -1,5 +1,4 @@
-import {UserEntity} from "src/users/entities/user.entity";
-import {Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
+import {Column, Entity, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
 import {ChannelEntity} from "./channel.entity";
 
 export enum SanctionType {

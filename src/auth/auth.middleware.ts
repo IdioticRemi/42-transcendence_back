@@ -1,7 +1,5 @@
 import {Injectable, NestMiddleware} from '@nestjs/common';
 import {NextFunction, Request, Response} from 'express';
-import fetch from "node-fetch";
-import { authenticator } from 'otplib';
 import {UsersService} from 'src/users/users.service';
 
 
