@@ -355,6 +355,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
+        const c = await this.channelService.getChannelById(data.channelId);
+        if (c.isPrivate) {
+            client.emit('error', "This channel is private");
+            return;
+        }
+
         const r = await this.channelService.addUserToChannel(user.id, data.channelId);
 
         if (r.status !== 'success') {
