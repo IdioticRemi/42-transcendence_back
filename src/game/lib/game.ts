@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import { GameType } from "../entities/game.entity";
 
 export const numActPerSendData = 2;
-export const baseSpeed = 120;
+export const baseSpeed = 100;
 export const scoreMax = 3;
 export const startTime = 1e3;
 export const gameTps = 120;
@@ -11,7 +11,7 @@ export const ballStartY = 6.67;
 export const ballSpeed = (baseSpeed / gameTps); //don't take a ration baseSpeed / gameTps over the padWidth could cause problem with collision detection
 export const ballSizeX = 2.4;
 export const ballSizeY = 3.2;
-export const ballSpeedInc = ballSpeed / 50;
+export const ballSpeedInc = ballSpeed / 25;
 export const padSpeed = (baseSpeed / gameTps);
 export const padHeight = 15;
 export const padWidth = 1.25;
@@ -35,7 +35,7 @@ export class Ball {
   sizeY: number;
   accel: number;
 
-  constructor(velocityX: number, customBallSpeed: number, accel: number) {
+  constructor(velocityX: number, customBallSpeed: number) {
     this.x = ballStartX;
     this.y = ballStartY;
     this.speed = customBallSpeed;
@@ -43,7 +43,7 @@ export class Ball {
     this.velocityY = customBallSpeed * Math.sin(Math.PI / 4);
     this.sizeX = ballSizeX;
     this.sizeY = ballSizeY;
-    this.accel = accel;
+    this.accel = 0;
   }
 }
 
@@ -106,23 +106,27 @@ export class Game {
   triggerZone: TriggerZone;
   packetId: number;
 
-  constructor(server: Server,
-              p1: number,
-              p2: number,
-              dbIdP1: number,
-              dbIdP2: number,
-              type: GameType,
-              customPadHeight= padHeight,
-              customBallSpeed = ballSpeed,
-              customAccelBall = 0,
-              setTrigger = false) {
+  constructor(
+    server: Server,
+    p1: number,
+    p2: number,
+    dbIdP1: number,
+    dbIdP2: number,
+    type: GameType,
+    customPadHeight = padHeight,
+    customBallSpeed = ballSpeed,
+    customAccelBall = ballSpeedInc,
+    setTrigger = false
+  ) {
+    const modeSpeed = type === GameType.CLASSIC ? customBallSpeed * 1.2 : customBallSpeed;
+
     this.server = server;
     this.interval = null;
     this.sendTest = 1;
     this.pause = false;
     this.p1Score = 0;
     this.p2Score = 0;
-    this.ball = new Ball(-customBallSpeed * Math.cos(Math.PI / 4), customBallSpeed, customAccelBall);
+    this.ball = new Ball(-modeSpeed * Math.cos(Math.PI / 4), modeSpeed);
     this.padLeft = new Pad(padLeftStartX, customPadHeight);
     this.padRight = new Pad(padRightStartX, customPadHeight);
     this.p1 = p1;
@@ -134,8 +138,10 @@ export class Game {
     this.type = type;
     if (type === GameType.CLASSIC)
       this.setTrigger = false;
-    else
+    else {
       this.setTrigger = true;
+      this.ball.accel = customAccelBall;
+    }
     this.isInTrigger = false;
     this.triggerZone = new TriggerZone(47, 46, 8, 6, ballSpeed / 5);
     this.packetId = 0;

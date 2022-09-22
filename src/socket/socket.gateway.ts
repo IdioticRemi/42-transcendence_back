@@ -1208,6 +1208,20 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             socket2.leave(`game_${gameId}`);
             return;
         }
+
+        // Cancel all invites from other players on both sides
+        if (this.socketService.invites.has(r2.payload[0].id)) {
+            const invites = this.socketService.invites.get(r2.payload[0].id);
+            invites.forEach((invite) => {
+                this.refuseInvite(invite, this.getSocketFromUserId(r2.payload[0].id));
+            });
+        }
+        if (this.socketService.invites.has(r2.payload[1].id)) {
+            const invites = this.socketService.invites.get(r2.payload[1].id);
+            invites.forEach((invite) => {
+                this.refuseInvite(invite, this.getSocketFromUserId(r2.payload[1].id));
+            });
+        }
  
         this.server.to(`game_${gameId}`).emit('success', `Found opponent! Starting game...`);
         this.server.to(`game_${gameId}`).emit('game_info', { p1: r2.payload[0].id, p2: r2.payload[1].id, p1Nick: r2.payload[0].nickname, p2Nick: r2.payload[1].nickname });
@@ -1345,6 +1359,20 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
+        // Cancel all invites from other players on both sides
+        if (this.socketService.invites.has(r2.payload[0].player.id)) {
+            const invites = this.socketService.invites.get(r2.payload[0].player.id);
+            invites.forEach((invite) => {
+                this.refuseInvite(invite, this.getSocketFromUserId(r2.payload[0].player.id));
+            });
+        }
+        if (this.socketService.invites.has(r2.payload[1].player.id)) {
+            const invites = this.socketService.invites.get(r2.payload[1].player.id);
+            invites.forEach((invite) => {
+                this.refuseInvite(invite, this.getSocketFromUserId(r2.payload[1].player.id));
+            });
+        }
+
         const gameId = [r2.payload[0].player.id, r2.payload[1].player.id].sort().join('_');
 
         client.join(`game_${gameId}`);
@@ -1357,7 +1385,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.sendSocketMsgByUserId(target.id, 'game_invite_accepted', { ...r.payload, nickname: user.nickname });
 
         // Stop queue animation and send to game page??
-        this.server.to(`game_${gameId}`).emit('success', 'CREATED GAME WITH ID: ' + gameId);
         this.server.to(`game_${gameId}`).emit('game_info', { p1: user.id, p2: target.id, p1Nick: user.nickname, p2Nick: target.nickname });
         this.server.to(`game_${gameId}`).emit('game_found');
 

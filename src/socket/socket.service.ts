@@ -236,8 +236,14 @@ export class SocketService {
         if (targetUserId === myUserId) {
             return failureMResponse("You cannot invite yourself");
         }
+
+        if (this.isInGame(targetUserId))
+            return failureMResponse("Target is already in game");
+
+        if (this.isInQueue(targetUserId))
+            return failureMResponse("Target is already in queue");
         
-        const targetInvites = this.invites.get(targetUserId);
+        let targetInvites = this.invites.get(targetUserId) || [];
 
         if (targetInvites.find(i => i.id === myUserId))
             return failureMResponse("You already invited this user");
@@ -247,6 +253,7 @@ export class SocketService {
         }
 
         targetInvites.push({ id: myUserId, type });
+        this.invites.set(targetUserId, targetInvites);
 
         return successMResponse(true);
     }
@@ -255,7 +262,7 @@ export class SocketService {
         if (!this.isUserOnline(targetUserId))
             return failureMResponse("Target is offline");
         
-        const targetInvites = this.invites.get(targetUserId);
+        const targetInvites = this.invites.get(targetUserId) || [];
 
         if (!targetInvites.find(i => i.id === myUserId))
             return failureMResponse("You haven't invited this user");
@@ -271,7 +278,7 @@ export class SocketService {
         if (!this.isUserOnline(targetUserId))
             return failureMResponse("Target is offline");
         
-        const myInvites = this.invites.get(myUserId);
+        const myInvites = this.invites.get(myUserId) || [];
 
         if (!myInvites.find(i => i.id === targetUserId))
             return failureMResponse("This user didn't invite you");
