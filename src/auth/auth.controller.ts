@@ -17,8 +17,6 @@ export class AuthorizationController {
     ) {
     }
 
-
-    //TODO rework with MResponse
     @Get()
     AuthRequest(@Res() res) {
         res.redirect(
