@@ -23,7 +23,7 @@ import { failureMResponse } from 'lib/MResponse';
 import { GameType } from 'src/game/entities/game.entity';
 import { PadMove } from 'src/game/lib/game';
 import { UserEntity } from 'src/users/entities/user.entity';
-import { MsgMaxSize } from 'lib';
+import { channelNameMaxSize, msgMaxSize, nicknameMaxSize, nicknameMinSize, passwordMaxSize } from 'lib';
 import { GameService } from 'src/game/game.service';
 import { forwardRef, Inject } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
@@ -238,13 +238,23 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !isObject(data) || !('private' in data) || !('name' in data) || /^\s*$/.test(data.name)) {
+        if (!user || !isObject(data) || !('private' in data) || !('name' in data)) {
             client.emit('error', 'cannot create this channel');
+            return;
+        }
+
+        if (!data.name || /^\s*$/.test(data.name) || data.name.length > channelNameMaxSize) {
+            client.emit('error', 'Channel name invalid');
             return;
         }
 
         if ('password' in data)
             data.private = true;
+
+        if (data.private == true && ( !data.password || data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
+            client.emit('error', 'Channel password invalid');
+            return;
+        }
 
         const ret = await this.channelService.createChannel(user.id, data.name, data.password || "", data.private);
 
@@ -276,15 +286,27 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !isObject(data) || !('isPrivate' in data) || !('name' in data) || !('password' in data) || /^\s*$/.test(data.name)) {
+        if (!user || !isObject(data) || !('isPrivate' in data) || !('name' in data) || !('password' in data)) {
             client.emit('error', 'Invalid data');
             return;
         }
 
+        
+        if (!data.name || /^\s*$/.test(data.name) || data.name.length > channelNameMaxSize) {
+            client.emit('error', 'Channel name invalid');
+            return;
+        }
+        
+        
         data.name = data.name.trim();
-
+        
         if (data.password !== '')
-            data.isPrivate = true;
+        data.isPrivate = true;
+        
+        if (data.isPrivate == true && (!data.password || data.password.length > passwordMaxSize || /^\s*$/.test(data.password))) {
+            client.emit('error', 'Channel password invalid');
+            return;
+        }
 
         const channel = await this.channelService.getChannelById(data.channelId, ['messages', 'admins']);
 
@@ -367,6 +389,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!user || !isObject(data) || !('channelName' in data)) return;
 
+        if (!data.channelName || data.channelName.length > channelNameMaxSize) {
+            client.emit('error', "Invalid channel name");
+            return;
+        }
+
         const channel = await this.channelService.getChannelByName(data.channelName, [
             'messages',
             'admins',
@@ -379,7 +406,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         if (channel.password !== "") {
-            if (!('password' in data)) {
+            if (!('password' in data) || !data.password || data.password.length > passwordMaxSize) {
                 client.emit('error', `Invalid password`);
                 return;
             }
@@ -520,8 +547,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (data.content.length > MsgMaxSize) {
-            client.emit("error", `You cannot send more than ${MsgMaxSize} characters`);
+        if (!data.content || data.content.length > msgMaxSize) {
+            client.emit("error", `You cannot send more than ${msgMaxSize} characters`);
             return;
         }
 
@@ -577,6 +604,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (!user || !isObject(data) || !('friendId' in data) || !('content' in data) || /^\s*$/.test(data.content))  {
             client.emit('error', `Invalid data`);
+            return;
+        }
+
+
+        if (!data.content || data.content.length > msgMaxSize) {
+            client.emit("error", `You cannot send more than ${msgMaxSize} characters`);
             return;
         }
 
@@ -644,13 +677,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) {
         const user = this.socketService.getConnectedUser(client.id);
 
-        if (!user || !isObject(data) || !('user' in data)) {
+        if (!user || !isObject(data) || !('user' in data) || !data.user) {
             client.emit('error', `Invalid data`);
             return;
         }
 
+        
         let friend = undefined;
-        if (typeof data.user === 'string') {
+        if (typeof data.user === 'string') {            
+            if (data.user.length > nicknameMaxSize) {
+                client.emit("error", `Nickname length is ${msgMaxSize} characters max`);
+                return;
+            }
             friend = await this.userService.getUserByNickname(data.user, ['friends']);
         } else {
             friend = await this.userService.getUserById(data.user, ['friends']);
@@ -813,8 +851,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
-        if (data.newNick.length > 16 || data.newNick.length < 4) {
-            client.emit('error', `Nickname must include 4 to 16 characters`);
+        if (!data.newNick || data.newNick.length > nicknameMaxSize || data.newNick.trim().length < nicknameMinSize) {
+            client.emit('error', `Nickname must include ${nicknameMinSize} to ${nicknameMaxSize} characters`);
             return;
         }
 
@@ -1111,6 +1149,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.emit('error', "Invalid data");
             return;
         }
+
+        if (data.type !== GameType.CLASSIC && data.type !== GameType.CUSTOM) {
+            client.emit('error', "Invalid game type");
+            return;
+        }
+
         const user = this.socketService.getConnectedUser(client.id)
         if (!user) {
             client.emit('error', 'Invalid user GAME_ADD_QUEUE');
@@ -1217,6 +1261,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
         }
 
+        if (!data.nickname || data.nickname.length < 4 || data.nickname.length > 16 || /^\s*$/.test(data.nickname)) {
+            client.emit('error', 'Nickname length is 4 to 16 characters');
+            return;
+        }
+
         if (this.socketService.isInGame(user.id)) {
             client.emit('error', 'You cannot invite while in game');
             return;
@@ -1246,6 +1295,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.socketService.getConnectedUser(client.id);
         if (!user || !isObject(data) || !('nickname' in data) || !('type' in data)) {
             client.emit('error', "Invalid data");
+            return;
+        }
+
+        if (!data.nickname || data.nickname.length < 4 || data.nickname.length > 16 || /^\s*$/.test(data.nickname)) {
+            client.emit('error', 'Nickname length is 4 to 16 characters');
             return;
         }
 

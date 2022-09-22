@@ -28,7 +28,7 @@ import {SocketModule} from './socket/socket.module';
             password: process.env.DB_PASSWORD,
             database: process.env.DB_NAME,
             entities: [UserEntity, ChannelEntity, GameEntity, SanctionEntity, MessageEntity],
-            // synchronize: true => dev only
+            // TODO: synchronize: true => dev only
             synchronize: true,
         }),
         UsersModule,
